@@ -12,15 +12,15 @@ interface Props {
 
 export function ChatPanel({ messages, isLoading, onSend }: Props) {
   return (
-    <aside className="flex w-[410px] shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-5 py-4">
+    <aside className="relative z-10 flex w-[420px] shrink-0 flex-col border-r border-cyan-300/15 bg-slate-950/78 shadow-[0_0_80px_rgba(0,255,209,0.08)] backdrop-blur-md">
+      <div className="border-b border-cyan-300/15 px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-[8px] bg-slate-950 text-sm font-semibold text-white">
+          <div className="grid h-10 w-10 place-items-center rounded-[8px] border border-cyan-300/40 bg-cyan-300/10 text-sm font-semibold text-cyan-100 shadow-[0_0_28px_rgba(0,255,209,0.18)]">
             A
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-950">AtlasLoop Copilot</p>
-            <p className="text-xs text-slate-500">Plan, refine, and save route-aware trips</p>
+            <p className="text-sm font-semibold text-cyan-50">AtlasLoop Copilot</p>
+            <p className="text-xs text-cyan-200/55">Neural route interface</p>
           </div>
         </div>
       </div>

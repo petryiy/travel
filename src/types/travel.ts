@@ -35,6 +35,13 @@ export interface Coordinates {
   lng: number
 }
 
+export interface LocationFocus {
+  name: string
+  label: string
+  coordinates: Coordinates
+  confidence: 'exact' | 'estimated'
+}
+
 export interface Activity {
   id?: string
   period: ActivityPeriod
@@ -114,6 +121,7 @@ export interface GeminiCanvas {
   type: 'none' | 'clarification' | 'itinerary'
   clarification?: ClarificationData | null
   itinerary?: Itinerary | null
+  locationFocus?: LocationFocus | null
 }
 
 export interface GeminiResponse {

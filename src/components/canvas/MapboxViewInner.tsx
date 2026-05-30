@@ -41,7 +41,7 @@ export default function MapboxViewInner({ center, locations }: Props) {
     <Map
       initialViewState={{ longitude: center.lng, latitude: center.lat, zoom: 12 }}
       style={{ width: '100%', height: '100%' }}
-      mapStyle="mapbox://styles/mapbox/light-v11"
+      mapStyle="mapbox://styles/mapbox/dark-v11"
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
     >
       <NavigationControl position="top-right" />
@@ -52,7 +52,7 @@ export default function MapboxViewInner({ center, locations }: Props) {
             id="active-route-line"
             type="line"
             paint={{
-              'line-color': '#276f65',
+              'line-color': '#00ffd1',
               'line-width': 4,
               'line-opacity': 0.72,
             }}
@@ -76,7 +76,7 @@ export default function MapboxViewInner({ center, locations }: Props) {
           }}
         >
           <div
-            className="grid h-8 w-8 cursor-pointer place-items-center rounded-full border-2 border-white bg-slate-950 text-xs font-semibold text-white shadow-md transition-transform hover:scale-110"
+            className="grid h-8 w-8 cursor-pointer place-items-center rounded-full border-2 border-cyan-100 bg-cyan-300 text-xs font-semibold text-slate-950 shadow-[0_0_28px_rgba(0,255,209,0.65)] transition-transform hover:scale-110"
             title={location.name}
           >
             {location.sequence ?? index + 1}
@@ -106,14 +106,14 @@ export default function MapboxViewInner({ center, locations }: Props) {
 
 function FallbackMap({ locations }: { locations: KeyLocation[] }) {
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[8px] bg-[#e7eee9]">
-      <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(39,111,101,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(39,111,101,0.12)_1px,transparent_1px)] [background-size:42px_42px]" />
-      <div className="absolute left-[10%] top-[16%] h-[46%] w-[72%] rounded-full border border-[#9fc6bd]" />
-      <div className="absolute bottom-[12%] right-[8%] h-[34%] w-[46%] rounded-full border border-[#d6a977]" />
+    <div className="relative h-full w-full overflow-hidden rounded-[8px] bg-slate-950">
+      <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(0,255,209,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,209,0.12)_1px,transparent_1px)] [background-size:42px_42px]" />
+      <div className="absolute left-[10%] top-[16%] h-[46%] w-[72%] rounded-full border border-cyan-300/20" />
+      <div className="absolute bottom-[12%] right-[8%] h-[34%] w-[46%] rounded-full border border-fuchsia-300/20" />
       {locations.slice(0, 6).map((location, index) => (
         <div
           key={`${location.name}-${index}`}
-          className="absolute grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-slate-950 text-xs font-semibold text-white shadow-md"
+          className="absolute grid h-9 w-9 place-items-center rounded-full border-2 border-cyan-100 bg-cyan-300 text-xs font-semibold text-slate-950 shadow-[0_0_28px_rgba(0,255,209,0.65)]"
           style={{
             left: `${18 + ((index * 17) % 62)}%`,
             top: `${24 + ((index * 13) % 48)}%`,
@@ -123,7 +123,7 @@ function FallbackMap({ locations }: { locations: KeyLocation[] }) {
           {location.sequence ?? index + 1}
         </div>
       ))}
-      <div className="absolute bottom-4 left-4 right-4 rounded-[8px] border border-white/70 bg-white/85 p-3 text-xs leading-5 text-slate-600 shadow-sm">
+      <div className="absolute bottom-4 left-4 right-4 rounded-[8px] border border-cyan-300/20 bg-slate-950/85 p-3 text-xs leading-5 text-cyan-100/70 shadow-sm">
         Add a Mapbox token to render live maps. The itinerary and route order are still available.
       </div>
     </div>

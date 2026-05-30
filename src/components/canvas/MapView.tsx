@@ -3,7 +3,7 @@ import type { KeyLocation } from '@/types/travel'
 
 const MapViewInner = dynamic(
   () => import('./MapViewInner').then((m) => m.MapViewInner),
-  { ssr: false, loading: () => <div className="h-full w-full animate-pulse rounded-[8px] bg-slate-100" /> }
+  { ssr: false, loading: () => <div className="h-full w-full animate-pulse rounded-[8px] bg-slate-900" /> }
 )
 
 interface Props {

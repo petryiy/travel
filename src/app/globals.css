@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f6f1;
-  --foreground: #0f172a;
+  --background: #020617;
+  --foreground: #e0fdfa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 * {
@@ -32,4 +32,97 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+::selection {
+  background: rgba(0, 255, 209, 0.28);
+  color: white;
+}
+
+.glitch {
+  position: relative;
+  text-shadow:
+    0 0 22px rgba(0, 255, 209, 0.2),
+    1px 0 rgba(0, 255, 209, 0.42),
+    -1px 0 rgba(255, 40, 230, 0.34);
+}
+
+.data-stream {
+  animation: data-flicker 3.2s steps(3, end) infinite;
+}
+
+.scan-line {
+  animation: scan-line 3.4s ease-in-out infinite;
+}
+
+.map-warp {
+  animation: map-warp 1.65s cubic-bezier(0.2, 0.82, 0.2, 1) both;
+}
+
+.marker-lock {
+  animation: marker-lock 1.2s ease-out 0.45s both;
+}
+
+@keyframes data-flicker {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(0);
+  }
+  32% {
+    opacity: 0.8;
+    transform: translateY(9px);
+  }
+  35% {
+    opacity: 0.2;
+    transform: translateY(-3px);
+  }
+  68% {
+    opacity: 0.65;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes scan-line {
+  0%,
+  100% {
+    transform: translateY(-310px);
+    opacity: 0;
+  }
+  18%,
+  80% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(310px);
+  }
+}
+
+@keyframes map-warp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.8) rotate(10deg);
+    filter: blur(14px);
+  }
+  52% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.92) rotate(-2deg);
+    filter: blur(0);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes marker-lock {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(4);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
 }

@@ -1,6 +1,6 @@
 # AtlasLoop
 
-AtlasLoop is a full-stack AI travel planning app for consumers. A traveler describes a destination, dates, budget, pace, and transport preference. The assistant produces a route-aware itinerary with scheduled stops, feasibility scoring, map markers, and saved trip snapshots.
+AtlasLoop is a full-stack AI travel planning app for consumers. A traveler enters a dark cinematic planning console, talks with an AI travel copilot, locks a home base on the map, and receives a route-aware itinerary with scheduled stops, feasibility scoring, map markers, and saved trip snapshots.
 
 ## Hackathon Track
 
@@ -24,7 +24,7 @@ The app also runs without AWS credentials for local demos. In that mode, the UI 
 
 - Next.js App Router and TypeScript
 - Tailwind CSS
-- Google Gemini for AI itinerary generation
+- Google Gemini for AI-led trip interview and itinerary generation
 - Amazon DynamoDB for saved trip snapshots
 - Mapbox and Google Maps for map display
 - Vercel for front-end and serverless deployment
@@ -81,8 +81,9 @@ flowchart LR
 
 ## Demo Story
 
-1. Enter a trip brief with destination, dates, pace, budget, transport, and optional base.
-2. The AI assistant generates an itinerary.
-3. The planner schedules each day, estimates travel time, and scores feasibility.
-4. The dashboard shows the active day route, pressure points, travel minutes, cost estimate, and map.
-5. The server saves the itinerary snapshot to DynamoDB when AWS credentials are configured.
+1. Start in the animated cyberpunk planning console.
+2. The AI asks one question at a time instead of showing a traditional form.
+3. When the traveler gives a home base, the interface animates into a map lock sequence.
+4. The planner schedules each day, estimates travel time, and scores feasibility.
+5. The dashboard shows the active day route, pressure points, travel minutes, cost estimate, and map.
+6. The server saves the itinerary snapshot to DynamoDB when AWS credentials are configured.

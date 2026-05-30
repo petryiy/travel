@@ -32,14 +32,14 @@ export default function GoogleMapViewInner({ center, locations }: Props) {
 
   if (!hasKey) {
     return (
-      <div className="grid h-full w-full place-items-center rounded-[8px] bg-slate-100 p-6 text-center text-sm leading-6 text-slate-500">
+      <div className="grid h-full w-full place-items-center rounded-[8px] bg-slate-950 p-6 text-center text-sm leading-6 text-cyan-100/55">
         Add a Google Maps key to enable the Google map view.
       </div>
     )
   }
 
   if (!isLoaded) {
-    return <div className="h-full w-full animate-pulse rounded-[8px] bg-slate-100" />
+    return <div className="h-full w-full animate-pulse rounded-[8px] bg-slate-900" />
   }
 
   return (
