@@ -4,15 +4,19 @@ import { createDemoItinerary } from '@/lib/planner/demoItinerary'
 import { optimizeItinerary } from '@/lib/planner/scheduler'
 import type { GeminiResponse, LocationFocus, Message, TripDetails } from '@/types/travel'
 
-const SYSTEM_PROMPT = `You are AtlasLoop, a cinematic AI travel operations assistant.
+const getSystemPrompt = () => {
+  const today = new Date().toISOString().slice(0, 10)
+  return `You are AtlasLoop, a cinematic AI travel operations assistant.
 
 The website UI must stay in English. You must respond with valid JSON only. Do not use markdown, code fences, comments, or prose outside JSON.
 
 Your job is to interview the traveler naturally, one question at a time, then generate a route-aware itinerary.
 
+Current Date: ${today}
+
 Required details before itinerary:
 - destination
-- dates
+- dates (If the user hasn't specified, ask for them. If they say "next week" or "tomorrow", calculate based on ${today}.)
 - traveler count
 - trip style
 - pace
@@ -94,6 +98,7 @@ Rules:
 - Include 3 to 5 activities per day.
 - Keep the plan realistic for pace and transport.
 - Do not include non-English text.`
+}
 
 const KNOWN_LOCATIONS: Record<string, LocationFocus> = {
   'circular quay': {
@@ -241,9 +246,20 @@ function nextClarification(details: Partial<TripDetails>) {
   }
 
   if (!details.startDate || !details.endDate) {
+    const today = new Date()
+    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const formattedToday = today.toISOString().slice(0, 10)
+    const formattedNextWeek = nextWeek.toISOString().slice(0, 10)
+    const inOneMonth = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const inOneMonthEnd = new Date(inOneMonth.getTime() + 7 * 24 * 60 * 60 * 1000)
+
     return {
       question: 'What dates should I plan around?',
-      suggestions: ['2026-06-12 to 2026-06-14', '2026-07-03 to 2026-07-07', '2026-09-18 to 2026-09-21'],
+      suggestions: [
+        `${formattedToday} to ${formattedNextWeek}`,
+        `${inOneMonth.toISOString().slice(0, 10)} to ${inOneMonthEnd.toISOString().slice(0, 10)}`,
+        'Next 3 days',
+      ],
     }
   }
 
@@ -272,10 +288,13 @@ function nextClarification(details: Partial<TripDetails>) {
 }
 
 function completeDetails(details: Partial<TripDetails>): TripDetails {
+  const today = new Date().toISOString().slice(0, 10)
+  const defaultEnd = new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  
   return {
     destination: details.destination ?? 'Sydney',
-    startDate: details.startDate ?? '2026-06-12',
-    endDate: details.endDate ?? details.startDate ?? '2026-06-14',
+    startDate: details.startDate ?? today,
+    endDate: details.endDate ?? details.startDate ?? defaultEnd,
     travelers: details.travelers ?? 2,
     style: details.style ?? 'mixed',
     pace: details.pace ?? 'balanced',
@@ -329,8 +348,8 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash-lite',
-      systemInstruction: SYSTEM_PROMPT,
+      model: 'gemini-2.0-flash',
+      systemInstruction: getSystemPrompt(),
       generationConfig: {
         responseMimeType: 'application/json',
       },

@@ -13,9 +13,10 @@ const PRESSURE_STYLES: Record<PressureLevel, string> = {
 interface Props {
   itinerary: Itinerary
   storageState: StorageState
+  onReset?: () => void
 }
 
-export function ItineraryDashboard({ itinerary, storageState }: Props) {
+export function ItineraryDashboard({ itinerary, storageState, onReset }: Props) {
   const [activeDay, setActiveDay] = useState(0)
   const day = itinerary.days[activeDay] ?? itinerary.days[0]
 
@@ -56,10 +57,20 @@ export function ItineraryDashboard({ itinerary, storageState }: Props) {
             </p>
           </div>
 
-          <div className="grid min-w-[360px] grid-cols-3 gap-2">
-            <Metric label="Feasibility" value={`${itinerary.feasibilityScore}`} detail="overall score" tone="cyan" />
-            <Metric label="Travel" value={`${Math.round(totalTravel / 60)}h`} detail="estimated total" tone="violet" />
-            <Metric label="Cost" value={`$${Math.round(totalCost)}`} detail="planned spend" tone="amber" />
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="grid min-w-[360px] grid-cols-3 gap-2">
+              <Metric label="Feasibility" value={`${itinerary.feasibilityScore}`} detail="overall score" tone="cyan" />
+              <Metric label="Travel" value={`${Math.round(totalTravel / 60)}h`} detail="estimated total" tone="violet" />
+              <Metric label="Cost" value={`$${Math.round(totalCost)}`} detail="planned spend" tone="amber" />
+            </div>
+            {onReset && (
+              <button
+                onClick={onReset}
+                className="h-[72px] rounded-[8px] border border-cyan-300/20 bg-slate-950/70 px-4 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100/75 transition hover:border-cyan-200 hover:bg-cyan-300/10"
+              >
+                Replan
+              </button>
+            )}
           </div>
         </div>
       </header>

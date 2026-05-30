@@ -191,6 +191,15 @@ export function useChat() {
     [messages, callAssistant]
   )
 
+  const resetSession = useCallback(() => {
+    setMessages(INITIAL_MESSAGES)
+    setCanvasState('setup')
+    setItinerary(null)
+    setLocationFocus(null)
+    setClarification(null)
+    setIsLoading(false)
+  }, [])
+
   return {
     messages,
     canvasState,
@@ -200,5 +209,6 @@ export function useChat() {
     isLoading,
     storageState,
     sendMessage,
+    resetSession,
   }
 }

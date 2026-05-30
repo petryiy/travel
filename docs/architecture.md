@@ -5,10 +5,10 @@
 ```mermaid
 flowchart TB
   Browser["Traveler browser"] --> Frontend["Next.js UI on Vercel"]
-  Frontend --> ChatPanel["Chat panel"]
-  Frontend --> Canvas["Itinerary canvas"]
+  Frontend --> Terminal["Immersive AI terminal"]
+  Frontend --> Canvas["Itinerary dashboard"]
 
-  ChatPanel --> ChatApi["POST /api/chat"]
+  Terminal --> ChatApi["POST /api/chat"]
   ChatApi --> Gemini["Google Gemini model"]
   ChatApi --> Planner["Planner service"]
   Planner --> Geo["Travel time estimator"]
