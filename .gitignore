@@ -1,27 +1,56 @@
-# Next.js
-.next/
-out/
-build/
-.vercel
-next-env.d.ts
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Environment
-.env
-.env*.local
+# testing
+/coverage
 
-# Debug
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+*.code-workspace
+
 # macOS
-.DS_Store
 .AppleDouble
 .LSOverride
 ._*
@@ -33,16 +62,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
-
-# JetBrains
-.idea/
-*.iml
-*.iws
-*.ipr
-
-# VS Code
-.vscode/
-*.code-workspace
 
 # AI tooling
 .claude/
