@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import MapboxViewInner from './MapboxViewInner'
-import GoogleMapViewInner from './GoogleMapViewInner'
 import type { KeyLocation } from '@/types/travel'
+import GoogleMapViewInner from './GoogleMapViewInner'
+import MapboxViewInner from './MapboxViewInner'
 
 interface Props {
   center: { lat: number; lng: number }
@@ -16,23 +16,21 @@ export function MapViewInner({ center, locations }: Props) {
   const [provider, setProvider] = useState<MapProvider>('mapbox')
 
   return (
-    <div className="h-full w-full flex flex-col gap-2">
-      <div className="flex gap-1 shrink-0">
-        {(['mapbox', 'google'] as MapProvider[]).map((p) => (
+    <div className="flex h-full w-full flex-col gap-2">
+      <div className="grid h-10 shrink-0 grid-cols-2 rounded-[8px] border border-slate-200 bg-white p-1">
+        {(['mapbox', 'google'] as MapProvider[]).map((option) => (
           <button
-            key={p}
-            onClick={() => setProvider(p)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-              provider === p
-                ? 'bg-indigo-600 text-white'
-                : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+            key={option}
+            onClick={() => setProvider(option)}
+            className={`rounded-[6px] text-xs font-semibold transition ${
+              provider === option ? 'bg-slate-950 text-white' : 'text-slate-500 hover:bg-slate-50'
             }`}
           >
-            {p === 'mapbox' ? 'Mapbox' : 'Google Maps'}
+            {option === 'mapbox' ? 'Mapbox' : 'Google Maps'}
           </button>
         ))}
       </div>
-      <div className="flex-1 rounded-2xl overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-[8px] border border-slate-200 bg-white">
         {provider === 'mapbox' ? (
           <MapboxViewInner center={center} locations={locations} />
         ) : (

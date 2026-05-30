@@ -1,8 +1,8 @@
 'use client'
 
-import { MessageList } from './MessageList'
-import { ChatInput } from './ChatInput'
 import type { Message } from '@/types/travel'
+import { ChatInput } from './ChatInput'
+import { MessageList } from './MessageList'
 
 interface Props {
   messages: Message[]
@@ -12,21 +12,21 @@ interface Props {
 
 export function ChatPanel({ messages, isLoading, onSend }: Props) {
   return (
-    <div className="w-[400px] shrink-0 flex flex-col border-r border-zinc-200 bg-white">
-      <div className="px-5 py-4 border-b border-zinc-200">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">
-            G
+    <aside className="flex w-[410px] shrink-0 flex-col border-r border-slate-200 bg-white">
+      <div className="border-b border-slate-200 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-9 w-9 place-items-center rounded-[8px] bg-slate-950 text-sm font-semibold text-white">
+            A
           </div>
           <div>
-            <p className="text-sm font-semibold text-zinc-900">Gemini Travel Planner</p>
-            <p className="text-xs text-zinc-400">Powered by Google AI</p>
+            <p className="text-sm font-semibold text-slate-950">AtlasLoop Copilot</p>
+            <p className="text-xs text-slate-500">Plan, refine, and save route-aware trips</p>
           </div>
         </div>
       </div>
 
       <MessageList messages={messages} isLoading={isLoading} />
       <ChatInput onSend={onSend} disabled={isLoading} />
-    </div>
+    </aside>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, KeyboardEvent } from 'react'
+import { KeyboardEvent, useRef, useState } from 'react'
 
 interface Props {
   onSend: (text: string) => void
@@ -19,48 +19,44 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
       handleSend()
     }
   }
 
   function handleInput() {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+    const element = textareaRef.current
+    if (!element) return
+    element.style.height = 'auto'
+    element.style.height = `${Math.min(element.scrollHeight, 150)}px`
   }
 
   return (
-    <div className="border-t border-zinc-200 px-4 py-3">
-      <div className="flex items-end gap-2 bg-zinc-100 rounded-2xl px-3 py-2">
+    <div className="border-t border-slate-200 px-4 py-3">
+      <div className="flex items-end gap-2 rounded-[8px] border border-slate-200 bg-slate-50 px-3 py-2">
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           disabled={disabled}
-          placeholder="Type a message…"
+          placeholder="Ask for changes, swaps, or a slower day."
           rows={1}
-          className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 resize-none outline-none max-h-40 leading-relaxed disabled:opacity-50"
+          className="max-h-40 flex-1 resize-none bg-transparent text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400 disabled:opacity-50"
         />
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 mb-0.5 disabled:opacity-40 hover:bg-indigo-700 transition-colors"
-          aria-label="Send"
+          className="mb-0.5 h-8 shrink-0 rounded-[6px] bg-slate-950 px-3 text-xs font-semibold text-white transition-colors hover:bg-[#276f65] disabled:opacity-40"
+          aria-label="Send message"
         >
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
+          Send
         </button>
       </div>
-      <p className="text-center text-[11px] text-zinc-400 mt-1.5">
-        Shift+Enter for new line · Enter to send
-      </p>
+      <p className="mt-1.5 text-center text-[11px] text-slate-400">Press Enter to send. Use Shift+Enter for a new line.</p>
     </div>
   )
 }

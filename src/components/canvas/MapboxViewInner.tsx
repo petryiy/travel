@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import Map, { Marker, Popup, NavigationControl } from 'react-map-gl/mapbox'
+import { useMemo, useState } from 'react'
+import Map, { Layer, Marker, NavigationControl, Popup, Source } from 'react-map-gl/mapbox'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { KeyLocation } from '@/types/travel'
 
@@ -10,44 +10,81 @@ interface Props {
   locations: KeyLocation[]
 }
 
-const TYPE_EMOJI: Record<string, string> = {
-  attraction: '🏛️',
-  food: '🍽️',
-  accommodation: '🏨',
-  activity: '🎯',
-  transport: '🚉',
-}
-
 export default function MapboxViewInner({ center, locations }: Props) {
   const [popupIndex, setPopupIndex] = useState<number | null>(null)
+
+  const routeData = useMemo(
+    () => ({
+      type: 'FeatureCollection' as const,
+      features:
+        locations.length > 1
+          ? [
+              {
+                type: 'Feature' as const,
+                properties: {},
+                geometry: {
+                  type: 'LineString' as const,
+                  coordinates: locations.map((location) => [location.lng, location.lat]),
+                },
+              },
+            ]
+          : [],
+    }),
+    [locations]
+  )
+
+  if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
+    return <FallbackMap locations={locations} />
+  }
 
   return (
     <Map
       initialViewState={{ longitude: center.lng, latitude: center.lat, zoom: 12 }}
       style={{ width: '100%', height: '100%' }}
-      mapStyle="mapbox://styles/mapbox/outdoors-v12"
+      mapStyle="mapbox://styles/mapbox/light-v11"
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
     >
       <NavigationControl position="top-right" />
 
-      {locations.map((loc, i) => (
+      {locations.length > 1 && (
+        <Source id="active-route" type="geojson" data={routeData}>
+          <Layer
+            id="active-route-line"
+            type="line"
+            paint={{
+              'line-color': '#276f65',
+              'line-width': 4,
+              'line-opacity': 0.72,
+            }}
+            layout={{
+              'line-cap': 'round',
+              'line-join': 'round',
+            }}
+          />
+        </Source>
+      )}
+
+      {locations.map((location, index) => (
         <Marker
-          key={i}
-          longitude={loc.lng}
-          latitude={loc.lat}
+          key={`${location.name}-${index}`}
+          longitude={location.lng}
+          latitude={location.lat}
           anchor="bottom"
-          onClick={(e) => { e.originalEvent.stopPropagation(); setPopupIndex(i) }}
+          onClick={(event) => {
+            event.originalEvent.stopPropagation()
+            setPopupIndex(index)
+          }}
         >
           <div
-            className="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white shadow-md flex items-center justify-center text-sm cursor-pointer hover:scale-110 transition-transform"
-            title={loc.name}
+            className="grid h-8 w-8 cursor-pointer place-items-center rounded-full border-2 border-white bg-slate-950 text-xs font-semibold text-white shadow-md transition-transform hover:scale-110"
+            title={location.name}
           >
-            {TYPE_EMOJI[loc.type ?? ''] ?? '📍'}
+            {location.sequence ?? index + 1}
           </div>
         </Marker>
       ))}
 
-      {popupIndex !== null && (
+      {popupIndex !== null && locations[popupIndex] && (
         <Popup
           longitude={locations[popupIndex].lng}
           latitude={locations[popupIndex].lat}
@@ -56,13 +93,39 @@ export default function MapboxViewInner({ center, locations }: Props) {
           closeOnClick={false}
         >
           <div className="text-sm">
-            <p className="font-semibold text-zinc-900">{locations[popupIndex].name}</p>
+            <p className="font-semibold text-slate-950">{locations[popupIndex].name}</p>
             {locations[popupIndex].type && (
-              <p className="text-xs text-zinc-500 capitalize mt-0.5">{locations[popupIndex].type}</p>
+              <p className="mt-0.5 text-xs capitalize text-slate-500">{locations[popupIndex].type}</p>
             )}
           </div>
         </Popup>
       )}
     </Map>
+  )
+}
+
+function FallbackMap({ locations }: { locations: KeyLocation[] }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden rounded-[8px] bg-[#e7eee9]">
+      <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(39,111,101,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(39,111,101,0.12)_1px,transparent_1px)] [background-size:42px_42px]" />
+      <div className="absolute left-[10%] top-[16%] h-[46%] w-[72%] rounded-full border border-[#9fc6bd]" />
+      <div className="absolute bottom-[12%] right-[8%] h-[34%] w-[46%] rounded-full border border-[#d6a977]" />
+      {locations.slice(0, 6).map((location, index) => (
+        <div
+          key={`${location.name}-${index}`}
+          className="absolute grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-slate-950 text-xs font-semibold text-white shadow-md"
+          style={{
+            left: `${18 + ((index * 17) % 62)}%`,
+            top: `${24 + ((index * 13) % 48)}%`,
+          }}
+          title={location.name}
+        >
+          {location.sequence ?? index + 1}
+        </div>
+      ))}
+      <div className="absolute bottom-4 left-4 right-4 rounded-[8px] border border-white/70 bg-white/85 p-3 text-xs leading-5 text-slate-600 shadow-sm">
+        Add a Mapbox token to render live maps. The itinerary and route order are still available.
+      </div>
+    </div>
   )
 }

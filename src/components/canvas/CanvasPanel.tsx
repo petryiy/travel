@@ -1,31 +1,40 @@
 'use client'
 
-import type { CanvasState, TripDetails, Itinerary, ClarificationData } from '@/types/travel'
-import { SetupForm } from './SetupForm'
+import type { CanvasState, ClarificationData, Itinerary, StorageState, TripDetails } from '@/types/travel'
 import { ClarificationCard } from './ClarificationCard'
 import { ItineraryDashboard } from './ItineraryDashboard'
+import { SetupForm } from './SetupForm'
 
 interface Props {
   canvasState: CanvasState
   itinerary: Itinerary | null
   clarification: ClarificationData | null
   isLoading: boolean
+  storageState: StorageState
   onSetup: (details: TripDetails) => void
   onSend: (text: string) => void
 }
 
-export function CanvasPanel({ canvasState, itinerary, clarification, isLoading, onSetup, onSend }: Props) {
+export function CanvasPanel({
+  canvasState,
+  itinerary,
+  clarification,
+  isLoading,
+  storageState,
+  onSetup,
+  onSend,
+}: Props) {
   if (canvasState === 'setup') {
     return <SetupForm onSubmit={onSetup} />
   }
 
   if (canvasState === 'loading') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-        <div className="text-center space-y-4">
-          <div className="text-5xl animate-bounce">✈️</div>
-          <p className="text-zinc-600 font-medium">Gemini is planning your trip…</p>
-          <p className="text-zinc-400 text-sm">This might take a moment</p>
+      <div className="flex flex-1 items-center justify-center bg-[#f7f6f1] p-8">
+        <div className="w-full max-w-sm text-center">
+          <div className="mx-auto mb-5 h-14 w-14 rounded-full border border-slate-200 border-t-slate-900 animate-spin" />
+          <p className="text-base font-semibold text-slate-950">Building your route-aware itinerary</p>
+          <p className="mt-2 text-sm text-slate-500">The assistant is balancing places, timing, pace, and travel mode.</p>
         </div>
       </div>
     )
@@ -36,16 +45,15 @@ export function CanvasPanel({ canvasState, itinerary, clarification, isLoading, 
   }
 
   if (canvasState === 'itinerary' && itinerary) {
-    return <ItineraryDashboard itinerary={itinerary} />
+    return <ItineraryDashboard itinerary={itinerary} storageState={storageState} />
   }
 
-  // Fallback: still loading or transitioning
   return (
-    <div className="flex-1 flex items-center justify-center bg-zinc-50">
+    <div className="flex flex-1 items-center justify-center bg-slate-50">
       <div className="flex gap-1.5">
-        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" />
+        <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
+        <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
+        <span className="h-2.5 w-2.5 animate-bounce rounded-full bg-slate-400" />
       </div>
     </div>
   )

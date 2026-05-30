@@ -1,7 +1,31 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import type { Message, TripDetails, CanvasState, Itinerary, ClarificationData, GeminiResponse } from '@/types/travel'
+import { useCallback, useEffect, useState } from 'react'
+import type {
+  CanvasState,
+  ClarificationData,
+  GeminiResponse,
+  Itinerary,
+  Message,
+  StorageState,
+  TripDetails,
+} from '@/types/travel'
+
+const SESSION_KEY = 'atlasloop-session-id'
+
+function sessionId() {
+  if (typeof window === 'undefined') return 'server-session'
+
+  const existing = window.localStorage.getItem(SESSION_KEY)
+  if (existing) return existing
+
+  const next =
+    typeof window.crypto?.randomUUID === 'function'
+      ? window.crypto.randomUUID()
+      : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  window.localStorage.setItem(SESSION_KEY, next)
+  return next
+}
 
 export function useChat() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -10,60 +34,176 @@ export function useChat() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [clarification, setClarification] = useState<ClarificationData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [storageState, setStorageState] = useState<StorageState>({
+    configured: false,
+    status: 'idle',
+    message: 'Checking DynamoDB storage.',
+  })
 
-  const callGemini = useCallback(async (nextMessages: Message[], details?: TripDetails) => {
-    setIsLoading(true)
-    setCanvasState((prev) => (prev === 'setup' ? 'loading' : prev))
+  useEffect(() => {
+    let active = true
 
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages, tripDetails: details }),
+    fetch('/api/storage/status')
+      .then((response) => response.json())
+      .then((data: { configured: boolean; tableName?: string | null }) => {
+        if (!active) return
+        setStorageState({
+          configured: data.configured,
+          status: data.configured ? 'idle' : 'unavailable',
+          message: data.configured
+            ? `DynamoDB table ready: ${data.tableName ?? 'configured table'}`
+            : 'DynamoDB is not configured in this environment.',
+        })
+      })
+      .catch(() => {
+        if (!active) return
+        setStorageState({
+          configured: false,
+          status: 'error',
+          message: 'Unable to check storage configuration.',
+        })
       })
 
-      const data: GeminiResponse = await res.json()
-
-      const assistantMessage: Message = { role: 'assistant', content: data.message }
-      setMessages((prev) => [...prev, assistantMessage])
-
-      if (data.canvas.type === 'clarification' && data.canvas.clarification) {
-        setClarification(data.canvas.clarification)
-        setCanvasState('clarification')
-      } else if (data.canvas.type === 'itinerary' && data.canvas.itinerary) {
-        setItinerary(data.canvas.itinerary)
-        setCanvasState('itinerary')
-      } else {
-        setCanvasState((prev) => (prev === 'loading' ? 'clarification' : prev))
-      }
-    } catch {
-      const errMsg: Message = { role: 'assistant', content: "Sorry, something went wrong. Please try again." }
-      setMessages((prev) => [...prev, errMsg])
-      setCanvasState('clarification')
-    } finally {
-      setIsLoading(false)
+    return () => {
+      active = false
     }
   }, [])
 
-  const submitSetup = useCallback(async (details: TripDetails) => {
-    setTripDetails(details)
+  const saveTrip = useCallback(async (nextItinerary: Itinerary) => {
+    setStorageState((prev) => ({
+      ...prev,
+      status: prev.configured ? 'saving' : 'unavailable',
+      message: prev.configured ? 'Saving itinerary to DynamoDB.' : prev.message,
+    }))
 
-    const styleLabel = details.style.charAt(0).toUpperCase() + details.style.slice(1)
-    const opener: Message = {
-      role: 'user',
-      content: `I want to plan a trip to ${details.destination}. I'll be traveling from ${details.startDate} to ${details.endDate} with ${details.travelers} traveler${details.travelers > 1 ? 's' : ''}. My preferred style is: ${styleLabel}. Please help me plan this trip!`,
+    try {
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionId(),
+          itinerary: nextItinerary,
+        }),
+      })
+      const data = (await response.json()) as {
+        saved: boolean
+        configured: boolean
+        record?: { createdAt: string; itinerary: Itinerary }
+        message?: string
+      }
+
+      if (!data.configured) {
+        setStorageState({
+          configured: false,
+          status: 'unavailable',
+          message: data.message ?? 'DynamoDB is not configured in this environment.',
+        })
+        return
+      }
+
+      if (data.saved && data.record) {
+        setItinerary(data.record.itinerary)
+        setStorageState({
+          configured: true,
+          status: 'saved',
+          message: 'Itinerary saved to DynamoDB.',
+          lastSavedAt: data.record.createdAt,
+        })
+        return
+      }
+
+      setStorageState({
+        configured: true,
+        status: 'error',
+        message: 'DynamoDB returned without saving the itinerary.',
+      })
+    } catch {
+      setStorageState({
+        configured: true,
+        status: 'error',
+        message: 'Unable to save this itinerary to DynamoDB.',
+      })
     }
+  }, [])
 
-    setMessages([opener])
-    await callGemini([opener], details)
-  }, [callGemini])
+  const callAssistant = useCallback(
+    async (nextMessages: Message[], details?: TripDetails) => {
+      setIsLoading(true)
+      setCanvasState((prev) => (prev === 'setup' ? 'loading' : prev))
 
-  const sendMessage = useCallback(async (text: string) => {
-    const userMessage: Message = { role: 'user', content: text }
-    const nextMessages = [...messages, userMessage]
-    setMessages(nextMessages)
-    await callGemini(nextMessages, tripDetails ?? undefined)
-  }, [messages, tripDetails, callGemini])
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: nextMessages, tripDetails: details }),
+        })
+
+        const data = (await response.json()) as GeminiResponse
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.message }])
+
+        if (data.canvas.type === 'clarification' && data.canvas.clarification) {
+          setClarification(data.canvas.clarification)
+          setCanvasState('clarification')
+          return
+        }
+
+        if (data.canvas.type === 'itinerary' && data.canvas.itinerary) {
+          setClarification(null)
+          setItinerary(data.canvas.itinerary)
+          setCanvasState('itinerary')
+          void saveTrip(data.canvas.itinerary)
+          return
+        }
+
+        setCanvasState((prev) => (prev === 'loading' ? 'clarification' : prev))
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'I hit a planning issue. Please try one more message.' },
+        ])
+        setCanvasState('clarification')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [saveTrip]
+  )
+
+  const submitSetup = useCallback(
+    async (details: TripDetails) => {
+      setTripDetails(details)
+
+      const opener: Message = {
+        role: 'user',
+        content: [
+          `Plan a trip to ${details.destination}.`,
+          `Dates: ${details.startDate} to ${details.endDate}.`,
+          `Travelers: ${details.travelers}.`,
+          `Style: ${details.style}.`,
+          `Pace: ${details.pace}.`,
+          `Budget: ${details.budget}.`,
+          `Transport: ${details.transport}.`,
+          details.homeBase ? `Preferred base: ${details.homeBase}.` : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+      }
+
+      setMessages([opener])
+      await callAssistant([opener], details)
+    },
+    [callAssistant]
+  )
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      const userMessage: Message = { role: 'user', content: text }
+      const nextMessages = [...messages, userMessage]
+      setMessages(nextMessages)
+      await callAssistant(nextMessages, tripDetails ?? undefined)
+    },
+    [messages, tripDetails, callAssistant]
+  )
 
   return {
     messages,
@@ -72,6 +212,7 @@ export function useChat() {
     itinerary,
     clarification,
     isLoading,
+    storageState,
     submitSetup,
     sendMessage,
   }

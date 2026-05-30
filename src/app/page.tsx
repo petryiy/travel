@@ -5,7 +5,7 @@ import { ChatPanel } from '@/components/chat/ChatPanel'
 import { CanvasPanel } from '@/components/canvas/CanvasPanel'
 
 export default function Home() {
-  const { messages, canvasState, itinerary, clarification, isLoading, submitSetup, sendMessage } = useChat()
+  const { messages, canvasState, itinerary, clarification, isLoading, storageState, submitSetup, sendMessage } = useChat()
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -15,6 +15,7 @@ export default function Home() {
         itinerary={itinerary}
         clarification={clarification}
         isLoading={isLoading}
+        storageState={storageState}
         onSetup={submitSetup}
         onSend={sendMessage}
       />

@@ -1,63 +1,119 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextRequest, NextResponse } from 'next/server'
-import type { Message, TripDetails } from '@/types/travel'
+import { createDemoItinerary } from '@/lib/planner/demoItinerary'
+import { optimizeItinerary } from '@/lib/planner/scheduler'
+import type { GeminiResponse, Message, TripDetails } from '@/types/travel'
 
-const SYSTEM_PROMPT = `You are an expert travel planning assistant. Your job is to help users plan detailed, personalized travel itineraries.
+const SYSTEM_PROMPT = `You are AtlasLoop, an expert AI travel planning assistant for consumers.
 
-CRITICAL: You must ALWAYS respond with valid JSON only. No markdown, no prose, no code blocks. Pure JSON.
+You must respond with valid JSON only. Do not use markdown, prose outside JSON, code fences, or comments.
 
 Response schema:
 {
-  "message": "Your conversational reply to the user",
+  "message": "A concise conversational reply in English",
   "canvas": {
     "type": "none" | "clarification" | "itinerary",
     "clarification": {
-      "question": "A specific question you need answered",
-      "suggestions": ["option 1", "option 2", "option 3"]
+      "question": "One specific question that improves the plan",
+      "suggestions": ["short option", "short option", "short option"]
     } | null,
     "itinerary": {
-      "trip": { "destination": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "travelers": 2, "style": "relax|culture|adventure|mixed" },
-      "summary": "Brief trip overview",
+      "trip": {
+        "destination": "string",
+        "startDate": "YYYY-MM-DD",
+        "endDate": "YYYY-MM-DD",
+        "travelers": 2,
+        "style": "relaxed|culture|adventure|food|mixed",
+        "pace": "easy|balanced|packed",
+        "budget": "lean|balanced|premium",
+        "transport": "walking|transit|driving",
+        "homeBase": "optional neighborhood or hotel area"
+      },
+      "summary": "Brief value-focused overview",
+      "feasibilityScore": 80,
+      "mapCenter": { "lat": 0, "lng": 0 },
+      "keyLocations": [],
       "days": [
         {
           "day": 1,
           "date": "YYYY-MM-DD",
-          "theme": "Arrival & City Center",
+          "theme": "Day theme",
+          "summary": "Why this day works",
           "activities": [
             {
-              "time": "morning|afternoon|evening",
+              "period": "morning|midday|afternoon|evening",
               "title": "Activity name",
-              "description": "What to do and why it's great",
-              "location": "Venue / neighborhood name",
-              "coordinates": { "lat": 0.0, "lng": 0.0 },
-              "type": "food|attraction|transport|accommodation|activity"
+              "description": "What the traveler should do and why it fits",
+              "location": "Venue, district, or landmark",
+              "coordinates": { "lat": 0, "lng": 0 },
+              "category": "food|attraction|transport|accommodation|activity|shopping|nightlife",
+              "durationMinutes": 75,
+              "estimatedCost": 25,
+              "bookingHint": "Optional booking note",
+              "priority": 1
             }
-          ]
+          ],
+          "route": [],
+          "feasibility": {
+            "score": 0,
+            "totalActivityMinutes": 0,
+            "totalTravelMinutes": 0,
+            "tightStops": 0,
+            "summary": ""
+          }
         }
       ],
-      "tips": ["Practical tip 1", "Practical tip 2"],
-      "mapCenter": { "lat": 0.0, "lng": 0.0 },
-      "keyLocations": [
-        { "name": "Place name", "lat": 0.0, "lng": 0.0, "type": "attraction|food|accommodation" }
-      ]
+      "tips": ["Practical tip", "Practical tip"]
     } | null
   }
 }
 
 Rules:
-- Set canvas.type = "clarification" when you need ONE specific piece of information. Include 2-4 suggestion chips.
-- Set canvas.type = "itinerary" ONLY when you have enough info to build a complete day-by-day plan with real coordinates.
-- Set canvas.type = "none" for general conversation or acknowledgements.
-- Coordinates must be accurate real-world lat/lng values.
-- Include at least 2-3 activities per day covering morning, afternoon, and evening.
-- Keep "message" friendly and conversational, as if texting a friend.`
+- Ask for clarification only when a missing detail would materially change the trip.
+- Build a complete itinerary when destination, dates, traveler count, pace, budget, style, and transport are known.
+- Use accurate real-world coordinates for each activity.
+- Include 3 to 5 activities per day.
+- Keep the plan realistic for the user's selected pace and transport mode.
+- Do not include non-English text.`
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+function cleanJson(text: string) {
+  return text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
+}
+
+function demoResponse(tripDetails?: TripDetails): GeminiResponse {
+  if (!tripDetails) {
+    return {
+      message: 'Tell me your destination, dates, budget, pace, and preferred transport so I can build the plan.',
+      canvas: {
+        type: 'clarification',
+        clarification: {
+          question: 'What destination should I plan for?',
+          suggestions: ['Tokyo', 'Sydney', 'Paris'],
+        },
+        itinerary: null,
+      },
+    }
+  }
+
+  return {
+    message: 'I created a route-aware starter itinerary with realistic buffers and feasibility checks.',
+    canvas: {
+      type: 'itinerary',
+      clarification: null,
+      itinerary: createDemoItinerary(tripDetails),
+    },
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { messages, tripDetails }: { messages: Message[]; tripDetails?: TripDetails } = await req.json()
 
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json(demoResponse(tripDetails))
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash-lite',
       systemInstruction: SYSTEM_PROMPT,
@@ -66,36 +122,30 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const history = messages.slice(0, -1).map((m) => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.content }],
+    const history = messages.slice(0, -1).map((message) => ({
+      role: message.role === 'user' ? 'user' : 'model',
+      parts: [{ text: message.content }],
     }))
 
     const lastMessage = messages[messages.length - 1]
-
     const chat = model.startChat({ history })
     const result = await chat.sendMessage(lastMessage.content)
-    const raw = result.response.text()
+    const parsed = JSON.parse(cleanJson(result.response.text())) as GeminiResponse
 
-    // Strip any accidental markdown fences
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
-
-    const parsed = JSON.parse(cleaned)
-
-    // Merge tripDetails into itinerary if Gemini omitted it
-    if (parsed.canvas?.type === 'itinerary' && parsed.canvas.itinerary && tripDetails) {
-      parsed.canvas.itinerary.trip = { ...tripDetails, ...parsed.canvas.itinerary.trip }
+    if (parsed.canvas.type === 'itinerary' && parsed.canvas.itinerary && tripDetails) {
+      const mergedTrip = { ...tripDetails, ...parsed.canvas.itinerary.trip }
+      parsed.canvas.itinerary = optimizeItinerary(
+        {
+          ...parsed.canvas.itinerary,
+          trip: mergedTrip,
+        },
+        mergedTrip
+      )
     }
 
     return NextResponse.json(parsed)
-  } catch (err) {
-    console.error('Chat API error:', err)
-    return NextResponse.json(
-      {
-        message: "Sorry, I ran into an issue. Could you try again?",
-        canvas: { type: 'none', clarification: null, itinerary: null },
-      },
-      { status: 200 }
-    )
+  } catch (error) {
+    console.error('Chat API error:', error)
+    return NextResponse.json(demoResponse())
   }
 }

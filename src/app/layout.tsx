@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Travel Planner",
-  description: "Plan your next trip with Gemini AI",
+  title: "AtlasLoop",
+  description: "AI travel planning with route-aware itineraries and DynamoDB storage",
 };
 
 export default function RootLayout({

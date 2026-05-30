@@ -16,41 +16,39 @@ export function MessageList({ messages, isLoading }: Props) {
   }, [messages, isLoading])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+    <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
       {messages.length === 0 && (
-        <div className="flex items-center justify-center h-full text-zinc-400 text-sm">
-          Fill in your trip details on the right to get started.
+        <div className="flex h-full items-center justify-center text-center text-sm leading-6 text-slate-400">
+          Complete the trip brief to start a planning session.
         </div>
       )}
 
-      {messages.map((msg, i) => (
-        <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-          {msg.role === 'assistant' && (
-            <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5 mr-2">
-              G
+      {messages.map((message, index) => (
+        <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          {message.role === 'assistant' && (
+            <div className="mr-2 mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-[6px] bg-slate-950 text-xs font-semibold text-white">
+              A
             </div>
           )}
           <div
-            className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-              msg.role === 'user'
-                ? 'bg-indigo-600 text-white rounded-br-sm'
-                : 'bg-zinc-100 text-zinc-800 rounded-bl-sm'
+            className={`max-w-[82%] rounded-[8px] px-3.5 py-2.5 text-sm leading-6 ${
+              message.role === 'user' ? 'bg-[#276f65] text-white' : 'bg-slate-100 text-slate-800'
             }`}
           >
-            {msg.content}
+            {message.content}
           </div>
         </div>
       ))}
 
       {isLoading && (
         <div className="flex justify-start">
-          <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5 mr-2">
-            G
+          <div className="mr-2 mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-[6px] bg-slate-950 text-xs font-semibold text-white">
+            A
           </div>
-          <div className="bg-zinc-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
-            <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" />
+          <div className="flex items-center gap-1 rounded-[8px] bg-slate-100 px-4 py-3">
+            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" />
           </div>
         </div>
       )}
