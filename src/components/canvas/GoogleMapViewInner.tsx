@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api'
 import type { KeyLocation } from '@/types/travel'
 
@@ -23,10 +23,6 @@ export default function GoogleMapViewInner({ center, locations }: Props) {
   })
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-
-  const onLoad = useCallback((m: google.maps.Map) => setMap(m), [])
-  const onUnmount = useCallback(() => setMap(null), [])
 
   if (!isLoaded) {
     return <div className="h-full w-full bg-zinc-100 animate-pulse rounded-2xl" />
@@ -38,8 +34,6 @@ export default function GoogleMapViewInner({ center, locations }: Props) {
       center={center}
       zoom={12}
       options={MAP_OPTIONS}
-      onLoad={onLoad}
-      onUnmount={onUnmount}
       onClick={() => setActiveIndex(null)}
     >
       {locations.map((loc, i) => (

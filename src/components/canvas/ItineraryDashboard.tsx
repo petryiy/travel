@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Itinerary, Activity } from '@/types/travel'
+import { downloadItineraryMarkdown } from '@/lib/itineraryExport'
 import { MapView } from './MapView'
 
 const TIME_ICONS: Record<Activity['time'], string> = {
@@ -20,9 +21,14 @@ const TYPE_COLORS: Record<Activity['type'], string> = {
 
 interface Props {
   itinerary: Itinerary
+  savedTripId: string | null
+  isSaving: boolean
+  saveStatus: string | null
+  saveError: string | null
+  onSave: () => void
 }
 
-export function ItineraryDashboard({ itinerary }: Props) {
+export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatus, saveError, onSave }: Props) {
   const [activeDay, setActiveDay] = useState(0)
   const day = itinerary.days[activeDay]
 
@@ -40,7 +46,31 @@ export function ItineraryDashboard({ itinerary }: Props) {
               {itinerary.trip.startDate} → {itinerary.trip.endDate} · {nights} {nights === 1 ? 'night' : 'nights'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'}
             </p>
           </div>
-          <p className="text-sm text-zinc-500 max-w-md text-right leading-relaxed">{itinerary.summary}</p>
+          <div className="flex flex-col items-end gap-2">
+            <p className="text-sm text-zinc-500 max-w-md text-right leading-relaxed">{itinerary.summary}</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={isSaving}
+                className="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+              >
+                {isSaving ? 'Saving...' : savedTripId ? 'Save changes' : 'Save trip'}
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadItineraryMarkdown(itinerary)}
+                className="rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition"
+              >
+                Export .md
+              </button>
+            </div>
+            {(saveStatus || saveError) && (
+              <p className={`text-xs ${saveError ? 'text-rose-500' : 'text-emerald-600'}`}>
+                {saveError ?? saveStatus}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

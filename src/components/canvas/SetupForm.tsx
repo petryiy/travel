@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import type { TripDetails, TripStyle } from '@/types/travel'
+import type { SavedTripSummary, TripDetails, TripStyle } from '@/types/travel'
 
 const STYLES: { value: TripStyle; label: string; emoji: string; desc: string }[] = [
   { value: 'relax', label: 'Relax', emoji: '🌴', desc: 'Beaches, spas & slow mornings' },
@@ -11,10 +11,13 @@ const STYLES: { value: TripStyle; label: string; emoji: string; desc: string }[]
 ]
 
 interface Props {
+  savedTrips: SavedTripSummary[]
+  isLoadingSavedTrips: boolean
   onSubmit: (details: TripDetails) => void
+  onOpenSavedTrip: (tripId: string) => void
 }
 
-export function SetupForm({ onSubmit }: Props) {
+export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSavedTrip }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const [destination, setDestination] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -143,6 +146,40 @@ export function SetupForm({ onSubmit }: Props) {
             Start planning →
           </button>
         </form>
+
+        <div className="mt-5 bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-zinc-900">Saved trips</h2>
+            {isLoadingSavedTrips && <span className="text-xs text-zinc-400">Loading...</span>}
+          </div>
+
+          {!isLoadingSavedTrips && savedTrips.length === 0 && (
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Saved itineraries will appear here after you connect Aurora PostgreSQL and save a trip.
+            </p>
+          )}
+
+          {savedTrips.length > 0 && (
+            <div className="space-y-2">
+              {savedTrips.slice(0, 4).map((trip) => (
+                <button
+                  key={trip.id}
+                  type="button"
+                  onClick={() => onOpenSavedTrip(trip.id)}
+                  className="w-full rounded-xl border border-zinc-100 px-3 py-2.5 text-left hover:bg-zinc-50 transition"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-zinc-900 truncate">{trip.destination}</p>
+                    <span className="text-[11px] text-zinc-400 shrink-0">{trip.travelers} pax</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 truncate mt-0.5">
+                    {trip.startDate} to {trip.endDate}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

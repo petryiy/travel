@@ -1,6 +1,6 @@
 'use client'
 
-import type { CanvasState, TripDetails, Itinerary, ClarificationData } from '@/types/travel'
+import type { CanvasState, TripDetails, Itinerary, ClarificationData, SavedTripSummary } from '@/types/travel'
 import { SetupForm } from './SetupForm'
 import { ClarificationCard } from './ClarificationCard'
 import { ItineraryDashboard } from './ItineraryDashboard'
@@ -10,13 +10,43 @@ interface Props {
   itinerary: Itinerary | null
   clarification: ClarificationData | null
   isLoading: boolean
+  savedTripId: string | null
+  savedTrips: SavedTripSummary[]
+  isSaving: boolean
+  isLoadingTrips: boolean
+  saveStatus: string | null
+  saveError: string | null
   onSetup: (details: TripDetails) => void
   onSend: (text: string) => void
+  onSave: () => void
+  onOpenSavedTrip: (tripId: string) => void
 }
 
-export function CanvasPanel({ canvasState, itinerary, clarification, isLoading, onSetup, onSend }: Props) {
+export function CanvasPanel({
+  canvasState,
+  itinerary,
+  clarification,
+  isLoading,
+  savedTripId,
+  savedTrips,
+  isSaving,
+  isLoadingTrips,
+  saveStatus,
+  saveError,
+  onSetup,
+  onSend,
+  onSave,
+  onOpenSavedTrip,
+}: Props) {
   if (canvasState === 'setup') {
-    return <SetupForm onSubmit={onSetup} />
+    return (
+      <SetupForm
+        savedTrips={savedTrips}
+        isLoadingSavedTrips={isLoadingTrips}
+        onSubmit={onSetup}
+        onOpenSavedTrip={onOpenSavedTrip}
+      />
+    )
   }
 
   if (canvasState === 'loading') {
@@ -36,7 +66,16 @@ export function CanvasPanel({ canvasState, itinerary, clarification, isLoading, 
   }
 
   if (canvasState === 'itinerary' && itinerary) {
-    return <ItineraryDashboard itinerary={itinerary} />
+    return (
+      <ItineraryDashboard
+        itinerary={itinerary}
+        savedTripId={savedTripId}
+        isSaving={isSaving}
+        saveStatus={saveStatus}
+        saveError={saveError}
+        onSave={onSave}
+      />
+    )
   }
 
   // Fallback: still loading or transitioning

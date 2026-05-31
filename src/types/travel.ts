@@ -62,3 +62,21 @@ export interface GeminiResponse {
 }
 
 export type CanvasState = 'setup' | 'loading' | 'clarification' | 'itinerary'
+
+export interface SavedTripSummary {
+  id: string
+  title: string
+  destination: string
+  startDate: string
+  endDate: string
+  travelers: number
+  style: TripStyle
+  summary: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SavedTrip extends SavedTripSummary {
+  itinerary: Itinerary
+  messages: Message[]
+}
