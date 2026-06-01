@@ -20,9 +20,11 @@ const TYPE_EMOJI: Record<string, string> = {
 
 export default function MapboxViewInner({ center, locations }: Props) {
   const [popupIndex, setPopupIndex] = useState<number | null>(null)
+  const activePopup = popupIndex === null ? null : locations[popupIndex]
 
   return (
     <Map
+      key={`${center.lat.toFixed(4)}-${center.lng.toFixed(4)}`}
       initialViewState={{ longitude: center.lng, latitude: center.lat, zoom: 12 }}
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/outdoors-v12"
@@ -32,7 +34,7 @@ export default function MapboxViewInner({ center, locations }: Props) {
 
       {locations.map((loc, i) => (
         <Marker
-          key={i}
+          key={`${loc.day ?? 'trip'}-${loc.order ?? i}-${loc.name}`}
           longitude={loc.lng}
           latitude={loc.lat}
           anchor="bottom"
@@ -42,23 +44,28 @@ export default function MapboxViewInner({ center, locations }: Props) {
             className="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white shadow-md flex items-center justify-center text-sm cursor-pointer hover:scale-110 transition-transform"
             title={loc.name}
           >
-            {TYPE_EMOJI[loc.type ?? ''] ?? '📍'}
+            {loc.order ?? TYPE_EMOJI[loc.type ?? ''] ?? '📍'}
           </div>
         </Marker>
       ))}
 
-      {popupIndex !== null && (
+      {activePopup && (
         <Popup
-          longitude={locations[popupIndex].lng}
-          latitude={locations[popupIndex].lat}
+          longitude={activePopup.lng}
+          latitude={activePopup.lat}
           anchor="top"
           onClose={() => setPopupIndex(null)}
           closeOnClick={false}
         >
           <div className="text-sm">
-            <p className="font-semibold text-zinc-900">{locations[popupIndex].name}</p>
-            {locations[popupIndex].type && (
-              <p className="text-xs text-zinc-500 capitalize mt-0.5">{locations[popupIndex].type}</p>
+            <p className="font-semibold text-zinc-900">{activePopup.name}</p>
+            {activePopup.title && (
+              <p className="text-xs text-zinc-600 mt-0.5">{activePopup.title}</p>
+            )}
+            {(activePopup.time || activePopup.type) && (
+              <p className="text-xs text-zinc-500 capitalize mt-0.5">
+                {[activePopup.time, activePopup.type].filter(Boolean).join(' · ')}
+              </p>
             )}
           </div>
         </Popup>

@@ -9,8 +9,9 @@ const MapViewInner = dynamic(
 interface Props {
   center: { lat: number; lng: number }
   locations: KeyLocation[]
+  activeDay?: number | null
 }
 
-export function MapView({ center, locations }: Props) {
-  return <MapViewInner center={center} locations={locations} />
+export function MapView({ center, locations, activeDay }: Props) {
+  return <MapViewInner center={center} locations={locations} activeDay={activeDay} />
 }

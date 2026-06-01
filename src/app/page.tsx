@@ -25,7 +25,7 @@ export default function Home() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <ChatPanel messages={messages} isLoading={isLoading} onSend={sendMessage} />
+      <ChatPanel messages={messages} isLoading={isLoading} onSend={sendMessage} hasItinerary={Boolean(itinerary)} />
       <CanvasPanel
         canvasState={canvasState}
         itinerary={itinerary}

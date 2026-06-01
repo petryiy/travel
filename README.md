@@ -22,7 +22,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment
 
-Create `.env.local` in the project root:
+Create `.env.local` in the project root for the Next.js app:
 
 ```
 GEMINI_API_KEY=your_google_ai_studio_key
@@ -32,6 +32,8 @@ NEXT_PUBLIC_GOOGLE_MAPS_KEY=your_google_maps_key
 ```
 
 Get a key at [https://aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+
+For Prisma CLI commands, also put `DATABASE_URL` in a root `.env` file or pass it inline. Prisma reads `.env` by default, while Next.js reads `.env.local`.
 
 For the hackathon submission, point `DATABASE_URL` at the Aurora PostgreSQL database connection string. Run migrations before using saved trips:
 

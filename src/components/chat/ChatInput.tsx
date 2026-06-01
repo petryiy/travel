@@ -5,9 +5,10 @@ import { useState, useRef, KeyboardEvent } from 'react'
 interface Props {
   onSend: (text: string) => void
   disabled: boolean
+  hasItinerary?: boolean
 }
 
-export function ChatInput({ onSend, disabled }: Props) {
+export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -43,7 +44,7 @@ export function ChatInput({ onSend, disabled }: Props) {
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           disabled={disabled}
-          placeholder="Type a message…"
+          placeholder={hasItinerary ? 'Ask for a change, e.g. “Add Shibuya Sky to day 2”…' : 'Type a message…'}
           rows={1}
           className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 resize-none outline-none max-h-40 leading-relaxed disabled:opacity-50"
         />

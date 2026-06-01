@@ -88,7 +88,11 @@ export function useChat() {
     return () => window.clearTimeout(timer)
   }, [ownerId, loadSavedTrips])
 
-  const callGemini = useCallback(async (nextMessages: Message[], details?: TripDetails) => {
+  const callGemini = useCallback(async (
+    nextMessages: Message[],
+    details?: TripDetails,
+    currentItinerary?: Itinerary | null
+  ) => {
     setIsLoading(true)
     setSaveStatus(null)
     setSaveError(null)
@@ -98,7 +102,7 @@ export function useChat() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages, tripDetails: details }),
+        body: JSON.stringify({ messages: nextMessages, tripDetails: details, currentItinerary }),
       })
 
       const data: GeminiResponse = await res.json()
@@ -111,6 +115,7 @@ export function useChat() {
         setCanvasState('clarification')
       } else if (data.canvas.type === 'itinerary' && data.canvas.itinerary) {
         setItinerary(data.canvas.itinerary)
+        setTripDetails(data.canvas.itinerary.trip)
         setClarification(null)
         setCanvasState('itinerary')
       } else {
@@ -147,8 +152,8 @@ export function useChat() {
     const userMessage: Message = { role: 'user', content: text }
     const nextMessages = [...messages, userMessage]
     setMessages(nextMessages)
-    await callGemini(nextMessages, tripDetails ?? undefined)
-  }, [messages, tripDetails, callGemini])
+    await callGemini(nextMessages, tripDetails ?? undefined, itinerary)
+  }, [messages, tripDetails, itinerary, callGemini])
 
   const saveCurrentTrip = useCallback(async () => {
     if (!ownerId || !itinerary) return

@@ -34,6 +34,10 @@ export interface KeyLocation {
   lat: number
   lng: number
   type?: string
+  day?: number
+  order?: number
+  time?: Activity['time']
+  title?: string
 }
 
 export interface Itinerary {

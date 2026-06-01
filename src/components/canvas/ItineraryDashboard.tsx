@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Itinerary, Activity } from '@/types/travel'
 import { downloadItineraryMarkdown } from '@/lib/itineraryExport'
+import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { MapView } from './MapView'
 
 const TIME_ICONS: Record<Activity['time'], string> = {
@@ -30,7 +31,16 @@ interface Props {
 
 export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatus, saveError, onSave }: Props) {
   const [activeDay, setActiveDay] = useState(0)
-  const day = itinerary.days[activeDay]
+  const safeActiveDay = Math.min(activeDay, Math.max(itinerary.days.length - 1, 0))
+  const day = itinerary.days[safeActiveDay]
+  const dayLocations = useMemo(() => (day ? getDayLocations(day) : []), [day])
+  const activeKeyLocations = itinerary.keyLocations.filter((location) => !day || location.day === day.day)
+  const mapLocations = dayLocations.length > 0
+    ? dayLocations
+    : activeKeyLocations.length > 0
+      ? activeKeyLocations
+      : itinerary.keyLocations
+  const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
 
   const nights = itinerary.days.length
   const travelers = itinerary.trip.travelers
@@ -84,7 +94,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                 key={i}
                 onClick={() => setActiveDay(i)}
                 className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                  activeDay === i
+                  safeActiveDay === i
                     ? 'bg-indigo-600 text-white'
                     : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                 }`}
@@ -138,7 +148,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
 
         {/* Right: Map */}
         <div className="flex-1 p-4">
-          <MapView center={itinerary.mapCenter} locations={itinerary.keyLocations} />
+          <MapView center={mapCenter} locations={mapLocations} activeDay={day?.day} />
         </div>
       </div>
     </div>
