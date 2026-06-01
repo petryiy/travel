@@ -176,7 +176,7 @@ export function useChat() {
 
       setSavedTripId(data.trip.id)
       setSavedTrips((prev) => [summary, ...prev.filter((trip) => trip.id !== summary.id)])
-      setSaveStatus('Saved to Aurora PostgreSQL')
+      setSaveStatus('Saved to Aurora DSQL')
     } catch {
       setSaveError('Could not save this trip. Check DATABASE_URL and Aurora access.')
     } finally {

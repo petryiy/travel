@@ -32,7 +32,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
+    <div className="flex-1 overflow-y-auto flex items-start justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">✈️</div>
@@ -155,7 +155,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
 
           {!isLoadingSavedTrips && savedTrips.length === 0 && (
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Saved itineraries will appear here after you connect Aurora PostgreSQL and save a trip.
+              Save a trip from the itinerary view and it will appear here.
             </p>
           )}
 
