@@ -55,18 +55,19 @@ Response schema:
 Rules:
 - Set canvas.type = "clarification" when you need ONE specific piece of information. Include 2-4 suggestion chips.
 - Set canvas.type = "itinerary" ONLY when you have enough info to build a complete day-by-day plan with real coordinates.
-- If CURRENT_ITINERARY_JSON is provided, act like an itinerary-editing agent. Apply the user's latest instruction to that existing itinerary, preserve unrelated days, and return the full updated itinerary.
+- If CURRENT_ITINERARY_JSON is provided, act like an itinerary-editing agent. Apply the user's latest instruction to that existing itinerary, preserve truly unrelated days, and return the full updated itinerary.
+- Before adding a new activity, check whether the same or semantically equivalent attraction, venue, restaurant, show, tour, reservation, or transit item already exists anywhere in the itinerary. If it does, update or move the existing activity instead of creating a duplicate.
+- If the user says they booked/reserved an activity for a different day or time and that activity already appears elsewhere, treat it as a reschedule: remove the old instance, place it at the booked day/time, mark it isFixedTime = true, and repair the affected days' timelines.
+- Do not schedule the same named tour, venue, or ticketed experience on multiple days unless the user explicitly asks to do it twice.
 - For edits such as "that day", "day 2", "Tuesday", a clock time, or a date, infer the matching itinerary day when possible. Ask a clarification only if the target day, requested location, or fixed appointment time is genuinely ambiguous.
 - When you make an edit, do not return only a diff. Return canvas.type = "itinerary" with the entire updated itinerary.
 - Set canvas.type = "none" for general conversation or acknowledgements.
 - Coordinates must be accurate real-world lat/lng values.
 - Create a concrete chronological timeline, not vague blocks. Every activity must include startTime, endTime, durationMinutes, and a time period.
-- Treat trip.dailyStartTime as the earliest normal departure time and trip.dailyEndTime as the latest normal return time. They are availability bounds, not a requirement to fill the full day.
-- Set each day's startTime and endTime to the actual planned first departure and final return/finish time. It is fine for a day to start later or end earlier when that is more realistic.
-- Choose the number of activities naturally based on the destination, travel time, opening hours, fatigue, and the user's style. There is no minimum or maximum activity count.
-- Use realistic visit durations. Do not stretch a viewpoint, shop, landmark, meal, or short experience just to fill morning/afternoon/evening.
-- Leave open time, rest time, or an early finish when appropriate. Do not invent filler stops or pad durations to fill gaps.
-- Include travelFromPrevious for every activity after the first meaningful stop of the day. Its duration should fit in the gap between the previous activity's endTime and this activity's startTime.
+- Treat trip.dailyStartTime and trip.dailyEndTime as the user's normal planning window for the day. Build a complete, well-paced day inside that window.
+- Choose activities and durations based on real-world visit length, opening hours, transit, meals, and the user's travel style.
+- If a stop is short, schedule it as short and continue with the next sensible part of the day instead of stretching it.
+- Include travelFromPrevious for every activity after the first meaningful stop of the day.
 - Avoid impossible overlaps. Leave small buffers for meals, queues, check-in, and transit.
 - If the user mentions a booking, reservation, ticket, flight, train, meeting, or "I have an activity at 14:00", mark that activity isFixedTime = true and rearrange the rest of that day around it.
 - Keep keyLocations aligned with the itinerary activities so the map can show each day's places.
@@ -85,7 +86,15 @@ function buildUserPrompt(
   tripDetails?: TripDetails,
   currentItinerary?: Itinerary | null
 ) {
-  if (!currentItinerary) return latestMessage
+  if (!currentItinerary) {
+    return [
+      latestMessage,
+      '',
+      tripDetails ? `TRIP_DETAILS_JSON: ${JSON.stringify(tripDetails)}` : '',
+      '',
+      'Use these trip details to create the itinerary. Return JSON only, using the required response schema.',
+    ].filter(Boolean).join('\n')
+  }
 
   return [
     'CURRENT_ITINERARY_JSON:',
@@ -96,8 +105,10 @@ function buildUserPrompt(
     `LATEST_USER_INSTRUCTION: ${latestMessage}`,
     '',
     'Apply the latest instruction to CURRENT_ITINERARY_JSON. Return JSON only, using the required response schema.',
+    'First identify whether the user is referring to an activity already present in CURRENT_ITINERARY_JSON, including close title/location matches. If yes, move or update that activity instead of adding another copy.',
+    'If an activity moves from one day to another, remove the old instance and rebalance both the source day and destination day.',
     'Preserve fixed-time activities unless the user explicitly changes them. Recalculate start/end times and travelFromPrevious for the affected day.',
-    'Keep durations realistic after edits. Do not pad activities or add filler stops just to fill the available day window.',
+    'Keep the revised day complete and well-paced inside the user’s planning window.',
   ].filter(Boolean).join('\n')
 }
 
