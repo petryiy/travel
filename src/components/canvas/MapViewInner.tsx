@@ -16,7 +16,7 @@ type MapProvider = 'mapbox' | 'google'
 export function MapViewInner({ center, locations, activeDay }: Props) {
   const [provider, setProvider] = useState<MapProvider>('mapbox')
   const locationKey = locations
-    .map((location) => `${location.day ?? 'trip'}:${location.order ?? ''}:${location.name}:${location.lat}:${location.lng}`)
+    .map((location) => `${location.day ?? 'trip'}:${location.order ?? ''}:${location.startTime ?? ''}:${location.endTime ?? ''}:${location.name}:${location.lat}:${location.lng}`)
     .join('|')
 
   return (

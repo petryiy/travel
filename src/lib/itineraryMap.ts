@@ -20,6 +20,8 @@ export function getDayLocations(day: DayPlan): KeyLocation[] {
       day: day.day,
       order: index + 1,
       time: activity.time,
+      startTime: activity.startTime,
+      endTime: activity.endTime,
       title: activity.title,
     }
   })

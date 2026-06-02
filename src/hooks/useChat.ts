@@ -141,7 +141,7 @@ export function useChat() {
     const styleLabel = details.style.charAt(0).toUpperCase() + details.style.slice(1)
     const opener: Message = {
       role: 'user',
-      content: `I want to plan a trip to ${details.destination}. I'll be traveling from ${details.startDate} to ${details.endDate} with ${details.travelers} traveler${details.travelers > 1 ? 's' : ''}. My preferred style is: ${styleLabel}. Please help me plan this trip!`,
+      content: `I want to plan a trip to ${details.destination}. I'll be traveling from ${details.startDate} to ${details.endDate} with ${details.travelers} traveler${details.travelers > 1 ? 's' : ''}. My preferred style is: ${styleLabel}. My normal daily availability is from ${details.dailyStartTime} to ${details.dailyEndTime}, but you do not need to fill that whole window. Please create a precise time-by-time itinerary with realistic visit durations and travel time between places. Leave open time or finish early when that makes more sense than padding activities.`,
     }
 
     setMessages([opener])
@@ -178,7 +178,7 @@ export function useChat() {
       setSavedTrips((prev) => [summary, ...prev.filter((trip) => trip.id !== summary.id)])
       setSaveStatus('Saved to Aurora DSQL')
     } catch {
-      setSaveError('Could not save this trip. Check DATABASE_URL and Aurora access.')
+      setSaveError('Could not save this trip. Check DSQL endpoint and AWS access.')
     } finally {
       setIsSaving(false)
     }

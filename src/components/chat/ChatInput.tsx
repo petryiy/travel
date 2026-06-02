@@ -44,7 +44,7 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           disabled={disabled}
-          placeholder={hasItinerary ? 'Ask for a change, e.g. “Add Shibuya Sky to day 2”…' : 'Type a message…'}
+          placeholder={hasItinerary ? 'Try: “I booked a 14:00 museum slot on day 2, rearrange that day”…' : 'Type a message…'}
           rows={1}
           className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 resize-none outline-none max-h-40 leading-relaxed disabled:opacity-50"
         />

@@ -10,6 +10,7 @@ export function itineraryToMarkdown(itinerary: Itinerary) {
 
   lines.push(line(`# ${trip.destination} Travel Plan`))
   lines.push(line(`${trip.startDate} to ${trip.endDate} · ${trip.travelers} ${trip.travelers === 1 ? 'traveler' : 'travelers'} · ${trip.style}`))
+  lines.push(line(`Available window: ${trip.dailyStartTime ?? '09:00'} - ${trip.dailyEndTime ?? '21:00'}`))
   lines.push(line())
   lines.push(line(itinerary.summary))
   lines.push(line())
@@ -17,10 +18,25 @@ export function itineraryToMarkdown(itinerary: Itinerary) {
   for (const day of itinerary.days) {
     lines.push(line(`## Day ${day.day}: ${day.theme}`))
     lines.push(line(day.date))
+    if (day.startTime || day.endTime) {
+      lines.push(line(`Day window: ${[day.startTime, day.endTime].filter(Boolean).join(' - ')}`))
+    }
     lines.push(line())
 
     for (const activity of day.activities) {
-      lines.push(line(`### ${activity.time}: ${activity.title}`))
+      const timeRange = activity.startTime || activity.endTime
+        ? `${[activity.startTime, activity.endTime].filter(Boolean).join(' - ')}`
+        : activity.time
+      lines.push(line(`### ${timeRange}: ${activity.title}`))
+      if (activity.durationMinutes) {
+        lines.push(line(`Duration: ${activity.durationMinutes} minutes`))
+      }
+      if (activity.travelFromPrevious) {
+        lines.push(line(`Travel from previous stop: ${activity.travelFromPrevious.durationMinutes} minutes by ${activity.travelFromPrevious.mode} - ${activity.travelFromPrevious.description}`))
+      }
+      if (activity.isFixedTime) {
+        lines.push(line('Fixed-time activity: yes'))
+      }
       lines.push(line(`Location: ${activity.location}`))
       lines.push(line(`Type: ${activity.type}`))
       if (activity.coordinates) {

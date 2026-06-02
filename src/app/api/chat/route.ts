@@ -17,16 +17,23 @@ Response schema:
       "suggestions": ["option 1", "option 2", "option 3"]
     } | null,
     "itinerary": {
-      "trip": { "destination": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "travelers": 2, "style": "relax|culture|adventure|mixed" },
+      "trip": { "destination": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "travelers": 2, "style": "relax|culture|adventure|mixed", "dailyStartTime": "09:00", "dailyEndTime": "21:00" },
       "summary": "Brief trip overview",
       "days": [
         {
           "day": 1,
           "date": "YYYY-MM-DD",
           "theme": "Arrival & City Center",
+          "startTime": "09:15",
+          "endTime": "17:30",
           "activities": [
             {
               "time": "morning|afternoon|evening",
+              "startTime": "09:30",
+              "endTime": "11:00",
+              "durationMinutes": 90,
+              "travelFromPrevious": { "mode": "transit|walk|taxi|rideshare|train|bus|ferry|flight|other", "durationMinutes": 25, "description": "25 min by metro from the previous stop" } | null,
+              "isFixedTime": false,
               "title": "Activity name",
               "description": "What to do and why it's great",
               "location": "Venue / neighborhood name",
@@ -39,7 +46,7 @@ Response schema:
       "tips": ["Practical tip 1", "Practical tip 2"],
       "mapCenter": { "lat": 0.0, "lng": 0.0 },
       "keyLocations": [
-        { "name": "Place name", "lat": 0.0, "lng": 0.0, "type": "attraction|food|accommodation", "day": 1, "order": 1, "time": "morning", "title": "Activity title" }
+        { "name": "Place name", "lat": 0.0, "lng": 0.0, "type": "attraction|food|accommodation", "day": 1, "order": 1, "time": "morning", "startTime": "09:30", "endTime": "11:00", "title": "Activity title" }
       ]
     } | null
   }
@@ -49,11 +56,19 @@ Rules:
 - Set canvas.type = "clarification" when you need ONE specific piece of information. Include 2-4 suggestion chips.
 - Set canvas.type = "itinerary" ONLY when you have enough info to build a complete day-by-day plan with real coordinates.
 - If CURRENT_ITINERARY_JSON is provided, act like an itinerary-editing agent. Apply the user's latest instruction to that existing itinerary, preserve unrelated days, and return the full updated itinerary.
-- For edits such as "that day", "day 2", "Tuesday", or a date, infer the matching itinerary day when possible. Ask a clarification only if the target day or requested location is genuinely ambiguous.
+- For edits such as "that day", "day 2", "Tuesday", a clock time, or a date, infer the matching itinerary day when possible. Ask a clarification only if the target day, requested location, or fixed appointment time is genuinely ambiguous.
 - When you make an edit, do not return only a diff. Return canvas.type = "itinerary" with the entire updated itinerary.
 - Set canvas.type = "none" for general conversation or acknowledgements.
 - Coordinates must be accurate real-world lat/lng values.
-- Include at least 2-3 activities per day covering morning, afternoon, and evening.
+- Create a concrete chronological timeline, not vague blocks. Every activity must include startTime, endTime, durationMinutes, and a time period.
+- Treat trip.dailyStartTime as the earliest normal departure time and trip.dailyEndTime as the latest normal return time. They are availability bounds, not a requirement to fill the full day.
+- Set each day's startTime and endTime to the actual planned first departure and final return/finish time. It is fine for a day to start later or end earlier when that is more realistic.
+- Choose the number of activities naturally based on the destination, travel time, opening hours, fatigue, and the user's style. There is no minimum or maximum activity count.
+- Use realistic visit durations. Do not stretch a viewpoint, shop, landmark, meal, or short experience just to fill morning/afternoon/evening.
+- Leave open time, rest time, or an early finish when appropriate. Do not invent filler stops or pad durations to fill gaps.
+- Include travelFromPrevious for every activity after the first meaningful stop of the day. Its duration should fit in the gap between the previous activity's endTime and this activity's startTime.
+- Avoid impossible overlaps. Leave small buffers for meals, queues, check-in, and transit.
+- If the user mentions a booking, reservation, ticket, flight, train, meeting, or "I have an activity at 14:00", mark that activity isFixedTime = true and rearrange the rest of that day around it.
 - Keep keyLocations aligned with the itinerary activities so the map can show each day's places.
 - Keep "message" friendly and conversational, as if texting a friend.`
 
@@ -81,6 +96,8 @@ function buildUserPrompt(
     `LATEST_USER_INSTRUCTION: ${latestMessage}`,
     '',
     'Apply the latest instruction to CURRENT_ITINERARY_JSON. Return JSON only, using the required response schema.',
+    'Preserve fixed-time activities unless the user explicitly changes them. Recalculate start/end times and travelFromPrevious for the affected day.',
+    'Keep durations realistic after edits. Do not pad activities or add filler stops just to fill the available day window.',
   ].filter(Boolean).join('\n')
 }
 

@@ -6,6 +6,8 @@ export interface TripDetails {
   endDate: string
   travelers: number
   style: TripStyle
+  dailyStartTime: string
+  dailyEndTime: string
 }
 
 export interface Message {
@@ -15,6 +17,15 @@ export interface Message {
 
 export interface Activity {
   time: 'morning' | 'afternoon' | 'evening'
+  startTime?: string
+  endTime?: string
+  durationMinutes?: number
+  travelFromPrevious?: {
+    mode: 'walk' | 'transit' | 'taxi' | 'rideshare' | 'train' | 'bus' | 'ferry' | 'flight' | 'other'
+    durationMinutes: number
+    description: string
+  } | null
+  isFixedTime?: boolean
   title: string
   description: string
   location: string
@@ -26,6 +37,8 @@ export interface DayPlan {
   day: number
   date: string
   theme: string
+  startTime?: string
+  endTime?: string
   activities: Activity[]
 }
 
@@ -37,6 +50,8 @@ export interface KeyLocation {
   day?: number
   order?: number
   time?: Activity['time']
+  startTime?: string
+  endTime?: string
   title?: string
 }
 

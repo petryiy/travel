@@ -62,6 +62,11 @@ export default function MapboxViewInner({ center, locations }: Props) {
             {activePopup.title && (
               <p className="text-xs text-zinc-600 mt-0.5">{activePopup.title}</p>
             )}
+            {(activePopup.startTime || activePopup.endTime) && (
+              <p className="text-xs font-medium text-indigo-600 mt-0.5">
+                {[activePopup.startTime, activePopup.endTime].filter(Boolean).join(' - ')}
+              </p>
+            )}
             {(activePopup.time || activePopup.type) && (
               <p className="text-xs text-zinc-500 capitalize mt-0.5">
                 {[activePopup.time, activePopup.type].filter(Boolean).join(' · ')}

@@ -24,11 +24,13 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
   const [endDate, setEndDate] = useState('')
   const [travelers, setTravelers] = useState(2)
   const [style, setStyle] = useState<TripStyle>('mixed')
+  const [dailyStartTime, setDailyStartTime] = useState('09:00')
+  const [dailyEndTime, setDailyEndTime] = useState('21:00')
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!destination.trim() || !startDate || !endDate) return
-    onSubmit({ destination: destination.trim(), startDate, endDate, travelers, style })
+    if (!destination.trim() || !startDate || !endDate || dailyStartTime >= dailyEndTime) return
+    onSubmit({ destination: destination.trim(), startDate, endDate, travelers, style, dailyStartTime, dailyEndTime })
   }
 
   return (
@@ -86,6 +88,37 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                Daily start
+              </label>
+              <input
+                type="time"
+                value={dailyStartTime}
+                onChange={(e) => setDailyStartTime(e.target.value)}
+                required
+                className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                Back by
+              </label>
+              <input
+                type="time"
+                value={dailyEndTime}
+                onChange={(e) => setDailyEndTime(e.target.value)}
+                required
+                className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+              />
+            </div>
+          </div>
+
+          {dailyStartTime >= dailyEndTime && (
+            <p className="text-xs text-rose-500">Daily start time must be earlier than the return time.</p>
+          )}
+
           {/* Travelers */}
           <div>
             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
@@ -140,7 +173,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
 
           <button
             type="submit"
-            disabled={!destination.trim() || !startDate || !endDate}
+            disabled={!destination.trim() || !startDate || !endDate || dailyStartTime >= dailyEndTime}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold text-sm rounded-xl py-3 transition"
           >
             Start planning →

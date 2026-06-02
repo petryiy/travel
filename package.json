@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-crypto/crc32": "^5.2.0",
     "@aws-sdk/client-dsql": "^3.1058.0",
+    "@aws-sdk/credential-provider-node": "^3.972.48",
     "@aws-sdk/dsql-signer": "^3.1058.0",
     "@google/generative-ai": "^0.24.1",
     "@react-google-maps/api": "^2.20.8",

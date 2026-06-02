@@ -20,6 +20,19 @@ const TYPE_COLORS: Record<Activity['type'], string> = {
   activity: 'bg-green-100 text-green-700',
 }
 
+function formatTimeRange(activity: Activity) {
+  if (activity.startTime && activity.endTime) return `${activity.startTime} - ${activity.endTime}`
+  if (activity.startTime) return activity.startTime
+  return activity.time
+}
+
+function dayWindow(dayStart?: string, dayEnd?: string) {
+  if (dayStart && dayEnd) return `${dayStart} - ${dayEnd}`
+  if (dayStart) return `from ${dayStart}`
+  if (dayEnd) return `until ${dayEnd}`
+  return null
+}
+
 interface Props {
   itinerary: Itinerary
   savedTripId: string | null
@@ -41,6 +54,10 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
       ? activeKeyLocations
       : itinerary.keyLocations
   const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
+  const currentDayWindow = dayWindow(
+    day?.startTime ?? itinerary.trip.dailyStartTime,
+    day?.endTime ?? itinerary.trip.dailyEndTime
+  )
 
   const nights = itinerary.days.length
   const travelers = itinerary.trip.travelers
@@ -54,6 +71,9 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             <h2 className="text-xl font-bold text-zinc-900">{itinerary.trip.destination}</h2>
             <p className="text-sm text-zinc-500 mt-0.5">
               {itinerary.trip.startDate} → {itinerary.trip.endDate} · {nights} {nights === 1 ? 'night' : 'nights'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'}
+            </p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Available window: {itinerary.trip.dailyStartTime ?? '09:00'} - {itinerary.trip.dailyEndTime ?? '21:00'}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -111,19 +131,46 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-bold text-zinc-900">{day.date}</span>
                   <span className="text-sm text-zinc-500">— {day.theme}</span>
+                  {currentDayWindow && (
+                    <span className="ml-auto text-xs font-medium text-zinc-400">Planned {currentDayWindow}</span>
+                  )}
                 </div>
                 {day.activities.map((act, i) => (
-                  <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-zinc-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-base">{TIME_ICONS[act.time]}</span>
-                      <span className="text-xs text-zinc-400 capitalize">{act.time}</span>
-                      <span className={`ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[act.type]}`}>
-                        {act.type}
-                      </span>
+                  <div key={i} className="flex gap-3">
+                    <div className="w-20 shrink-0 pt-4 text-right">
+                      <p className="text-xs font-bold text-zinc-900">{formatTimeRange(act)}</p>
+                      {act.durationMinutes && (
+                        <p className="text-[11px] text-zinc-400 mt-0.5">{act.durationMinutes} min</p>
+                      )}
                     </div>
-                    <p className="text-sm font-semibold text-zinc-900">{act.title}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5 mb-2">📍 {act.location}</p>
-                    <p className="text-xs text-zinc-600 leading-relaxed">{act.description}</p>
+                    <div className="relative flex flex-col items-center">
+                      <span className="mt-5 flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm">
+                        {i + 1}
+                      </span>
+                      {i < day.activities.length - 1 && <span className="w-px flex-1 bg-zinc-200" />}
+                    </div>
+                    <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm border border-zinc-100">
+                      {act.travelFromPrevious && (
+                        <p className="mb-2 inline-flex rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-500">
+                          {act.travelFromPrevious.durationMinutes} min {act.travelFromPrevious.mode}: {act.travelFromPrevious.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">{TIME_ICONS[act.time]}</span>
+                        <span className="text-xs text-zinc-400 capitalize">{act.time}</span>
+                        {act.isFixedTime && (
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            fixed time
+                          </span>
+                        )}
+                        <span className={`ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full capitalize ${TYPE_COLORS[act.type]}`}>
+                          {act.type}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-zinc-900">{act.title}</p>
+                      <p className="text-xs text-zinc-400 mt-0.5 mb-2">📍 {act.location}</p>
+                      <p className="text-xs text-zinc-600 leading-relaxed">{act.description}</p>
+                    </div>
                   </div>
                 ))}
               </>

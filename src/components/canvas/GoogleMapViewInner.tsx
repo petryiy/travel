@@ -57,6 +57,11 @@ export default function GoogleMapViewInner({ center, locations }: Props) {
             {activeLocation.title && (
               <p className="text-xs text-zinc-600 mt-0.5">{activeLocation.title}</p>
             )}
+            {(activeLocation.startTime || activeLocation.endTime) && (
+              <p className="text-xs font-medium text-indigo-600 mt-0.5">
+                {[activeLocation.startTime, activeLocation.endTime].filter(Boolean).join(' - ')}
+              </p>
+            )}
             {(activeLocation.time || activeLocation.type) && (
               <p className="text-xs text-zinc-500 capitalize mt-0.5">
                 {[activeLocation.time, activeLocation.type].filter(Boolean).join(' · ')}
