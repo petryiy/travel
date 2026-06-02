@@ -17,7 +17,7 @@ Response schema:
       "suggestions": ["option 1", "option 2", "option 3"]
     } | null,
     "itinerary": {
-      "trip": { "destination": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "travelers": 2, "style": "relax|culture|adventure|mixed", "dailyStartTime": "09:00", "dailyEndTime": "21:00" },
+      "trip": { "destination": "...", "accommodationLocation": "Hotel / neighborhood / address or null", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "travelers": 2, "style": "relax|culture|adventure|mixed", "dailyStartTime": "09:00", "dailyEndTime": "21:00" },
       "summary": "Brief trip overview",
       "days": [
         {
@@ -65,6 +65,7 @@ Rules:
 - Coordinates must be accurate real-world lat/lng values.
 - Create a concrete chronological timeline, not vague blocks. Every activity must include startTime, endTime, durationMinutes, and a time period.
 - Treat trip.dailyStartTime and trip.dailyEndTime as the user's normal planning window for the day. Build a complete, well-paced day inside that window.
+- If trip.accommodationLocation is provided, use it as the home base for each day. Plan the first travel leg from that area/place and end the day with a realistic route back toward it.
 - Choose activities and durations based on real-world visit length, opening hours, transit, meals, and the user's travel style.
 - If a stop is short, schedule it as short and continue with the next sensible part of the day instead of stretching it.
 - Include travelFromPrevious for every activity after the first meaningful stop of the day.
@@ -79,6 +80,197 @@ interface ChatRequest {
   messages: Message[]
   tripDetails?: TripDetails
   currentItinerary?: Itinerary | null
+}
+
+const BOOKING_OR_MOVE_RE = /\b(booked|booking|reserved|reservation|ticket|tickets|slot|appointment|move|moved|reschedule|rescheduled|change|changed)\b/i
+const STOP_WORDS = new Set([
+  'the',
+  'and',
+  'for',
+  'with',
+  'from',
+  'that',
+  'this',
+  'have',
+  'booked',
+  'booking',
+  'reserved',
+  'reservation',
+  'ticket',
+  'tickets',
+  'slot',
+  'appointment',
+  'move',
+  'moved',
+  'reschedule',
+  'rescheduled',
+  'change',
+  'changed',
+  'day',
+  'pm',
+  'am',
+])
+
+function getTargetDay(text: string) {
+  const englishMatch = text.match(/\bday\s*(\d+)\b/i)
+  if (englishMatch) return Number(englishMatch[1])
+
+  const chineseMatch = text.match(/第\s*(\d+)\s*天/)
+  if (chineseMatch) return Number(chineseMatch[1])
+
+  return null
+}
+
+function significantTokens(text: string) {
+  return Array.from(new Set(
+    text
+      .toLowerCase()
+      .replace(/\b\d{1,2}(:\d{2})?\s*(am|pm)?\b/g, ' ')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((token) => token.length > 2 && !STOP_WORDS.has(token))
+  ))
+}
+
+function activityTokens(activity: Itinerary['days'][number]['activities'][number]) {
+  return significantTokens(`${activity.title} ${activity.location}`)
+}
+
+function overlapScore(sourceTokens: string[], targetTokens: string[]) {
+  if (sourceTokens.length === 0 || targetTokens.length === 0) return { overlap: 0, score: 0 }
+
+  const source = new Set(sourceTokens)
+  const overlap = targetTokens.filter((token) => source.has(token)).length
+
+  return {
+    overlap,
+    score: overlap / Math.min(sourceTokens.length, targetTokens.length),
+  }
+}
+
+function findBestMatchingActivityIndex(
+  activities: Itinerary['days'][number]['activities'],
+  queryTokens: string[]
+) {
+  let bestIndex = -1
+  let bestScore = 0
+
+  activities.forEach((activity, index) => {
+    const { overlap, score } = overlapScore(activityTokens(activity), queryTokens)
+    if (overlap >= 2 && score > bestScore) {
+      bestIndex = index
+      bestScore = score
+    }
+  })
+
+  return bestScore >= 0.5 ? bestIndex : -1
+}
+
+function isSameActivity(
+  activity: Itinerary['days'][number]['activities'][number],
+  referenceTokens: string[]
+) {
+  const { overlap, score } = overlapScore(activityTokens(activity), referenceTokens)
+  return overlap >= 2 && score >= 0.6
+}
+
+function removeDuplicateBookedActivity(itinerary: Itinerary, latestMessage: string) {
+  if (!BOOKING_OR_MOVE_RE.test(latestMessage)) return itinerary
+
+  const targetDayNumber = getTargetDay(latestMessage)
+  if (!targetDayNumber) return itinerary
+
+  const targetDay = itinerary.days.find((day) => day.day === targetDayNumber)
+  if (!targetDay) return itinerary
+
+  const queryTokens = significantTokens(latestMessage)
+  if (queryTokens.length < 2) return itinerary
+
+  const targetActivityIndex = findBestMatchingActivityIndex(targetDay.activities, queryTokens)
+  if (targetActivityIndex < 0) return itinerary
+
+  const referenceTokens = activityTokens(targetDay.activities[targetActivityIndex])
+
+  return {
+    ...itinerary,
+    days: itinerary.days.map((day) => {
+      let removedBeforeNextActivity = false
+
+      return {
+        ...day,
+        activities: day.activities.flatMap((activity, index) => {
+          const shouldKeepTarget = day.day === targetDayNumber && index === targetActivityIndex
+          const shouldRemoveDuplicate = !shouldKeepTarget && isSameActivity(activity, referenceTokens)
+
+          if (shouldRemoveDuplicate) {
+            removedBeforeNextActivity = true
+            return []
+          }
+
+          if (removedBeforeNextActivity) {
+            removedBeforeNextActivity = false
+            return [{ ...activity, travelFromPrevious: null }]
+          }
+
+          return [activity]
+        }),
+      }
+    }),
+  }
+}
+
+function stripMarkdownFences(text: string) {
+  return text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
+}
+
+function extractFirstJsonObject(text: string) {
+  const start = text.indexOf('{')
+  if (start < 0) throw new SyntaxError('No JSON object found in model response')
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index]
+
+    if (inString) {
+      if (escaped) {
+        escaped = false
+      } else if (char === '\\') {
+        escaped = true
+      } else if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inString = true
+    } else if (char === '{') {
+      depth += 1
+    } else if (char === '}') {
+      depth -= 1
+      if (depth === 0) {
+        return text.slice(start, index + 1)
+      }
+    }
+  }
+
+  throw new SyntaxError('Unterminated JSON object in model response')
+}
+
+function parseModelJson(raw: string) {
+  const cleaned = stripMarkdownFences(raw)
+
+  try {
+    return JSON.parse(cleaned)
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return JSON.parse(extractFirstJsonObject(cleaned))
+    }
+    throw err
+  }
 }
 
 function buildUserPrompt(
@@ -135,10 +327,7 @@ export async function POST(req: NextRequest) {
     const result = await chat.sendMessage(buildUserPrompt(lastMessage.content, tripDetails, currentItinerary))
     const raw = result.response.text()
 
-    // Strip any accidental markdown fences
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim()
-
-    const parsed = JSON.parse(cleaned)
+    const parsed = parseModelJson(raw)
 
     // Merge tripDetails into itinerary if Gemini omitted it, then derive reliable map markers.
     if (parsed.canvas?.type === 'itinerary' && parsed.canvas.itinerary) {
@@ -146,6 +335,7 @@ export async function POST(req: NextRequest) {
         parsed.canvas.itinerary.trip = { ...tripDetails, ...parsed.canvas.itinerary.trip }
       }
 
+      parsed.canvas.itinerary = removeDuplicateBookedActivity(parsed.canvas.itinerary, lastMessage.content)
       parsed.canvas.itinerary = normalizeItineraryMapData(parsed.canvas.itinerary)
     }
 

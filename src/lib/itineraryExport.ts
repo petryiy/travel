@@ -10,6 +10,9 @@ export function itineraryToMarkdown(itinerary: Itinerary) {
 
   lines.push(line(`# ${trip.destination} Travel Plan`))
   lines.push(line(`${trip.startDate} to ${trip.endDate} · ${trip.travelers} ${trip.travelers === 1 ? 'traveler' : 'travelers'} · ${trip.style}`))
+  if (trip.accommodationLocation) {
+    lines.push(line(`Staying near: ${trip.accommodationLocation}`))
+  }
   lines.push(line(`Available window: ${trip.dailyStartTime ?? '09:00'} - ${trip.dailyEndTime ?? '21:00'}`))
   lines.push(line())
   lines.push(line(itinerary.summary))

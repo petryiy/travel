@@ -20,6 +20,7 @@ interface Props {
 export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSavedTrip }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const [destination, setDestination] = useState('')
+  const [accommodationLocation, setAccommodationLocation] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [travelers, setTravelers] = useState(2)
@@ -30,7 +31,16 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!destination.trim() || !startDate || !endDate || dailyStartTime >= dailyEndTime) return
-    onSubmit({ destination: destination.trim(), startDate, endDate, travelers, style, dailyStartTime, dailyEndTime })
+    onSubmit({
+      destination: destination.trim(),
+      accommodationLocation: accommodationLocation.trim() || undefined,
+      startDate,
+      endDate,
+      travelers,
+      style,
+      dailyStartTime,
+      dailyEndTime,
+    })
   }
 
   return (
@@ -54,6 +64,19 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
               onChange={(e) => setDestination(e.target.value)}
               placeholder="e.g. Tokyo, Paris, Bali…"
               required
+              className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+              Staying near
+            </label>
+            <input
+              type="text"
+              value={accommodationLocation}
+              onChange={(e) => setAccommodationLocation(e.target.value)}
+              placeholder="e.g. The Rocks, Shinjuku, hotel name, or address"
               className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
             />
           </div>

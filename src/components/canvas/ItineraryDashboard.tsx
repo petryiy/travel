@@ -72,6 +72,11 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             <p className="text-sm text-zinc-500 mt-0.5">
               {itinerary.trip.startDate} → {itinerary.trip.endDate} · {nights} {nights === 1 ? 'night' : 'nights'} · {travelers} {travelers === 1 ? 'traveler' : 'travelers'}
             </p>
+            {itinerary.trip.accommodationLocation && (
+              <p className="text-xs text-zinc-400 mt-1">
+                Staying near {itinerary.trip.accommodationLocation}
+              </p>
+            )}
             <p className="text-xs text-zinc-400 mt-1">
               Available window: {itinerary.trip.dailyStartTime ?? '09:00'} - {itinerary.trip.dailyEndTime ?? '21:00'}
             </p>

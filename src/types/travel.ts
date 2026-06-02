@@ -2,6 +2,7 @@ export type TripStyle = 'relax' | 'culture' | 'adventure' | 'mixed'
 
 export interface TripDetails {
   destination: string
+  accommodationLocation?: string
   startDate: string
   endDate: string
   travelers: number
