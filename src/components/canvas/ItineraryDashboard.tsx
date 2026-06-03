@@ -40,9 +40,10 @@ interface Props {
   saveStatus: string | null
   saveError: string | null
   onSave: () => void
+  onOverview?: () => void
 }
 
-export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatus, saveError, onSave }: Props) {
+export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatus, saveError, onSave, onOverview }: Props) {
   const [activeDay, setActiveDay] = useState(0)
   const safeActiveDay = Math.min(activeDay, Math.max(itinerary.days.length - 1, 0))
   const day = itinerary.days[safeActiveDay]
@@ -84,6 +85,15 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
           <div className="flex flex-col items-end gap-2">
             <p className="text-sm text-zinc-500 max-w-md text-right leading-relaxed">{itinerary.summary}</p>
             <div className="flex items-center gap-2">
+              {savedTripId && onOverview && (
+                <button
+                  type="button"
+                  onClick={onOverview}
+                  className="rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition"
+                >
+                  Overview
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onSave}

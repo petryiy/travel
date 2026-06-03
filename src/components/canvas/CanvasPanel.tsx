@@ -97,6 +97,7 @@ export function CanvasPanel({
         saveStatus={saveStatus}
         saveError={saveError}
         onSave={onSave}
+        onOverview={() => onPresentationModeChange('overview')}
       />
     )
   }
