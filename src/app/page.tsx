@@ -1,16 +1,10 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
-import { HomeClient } from '@/components/HomeClient'
+import { LandingPage } from '@/components/LandingPage'
 
-export default async function Home() {
+export default async function WelcomePage() {
   const session = await auth()
-  if (!session?.user?.id) redirect('/login')
+  if (session?.user?.id) redirect('/dashboard')
 
-  return (
-    <HomeClient
-      userId={session.user.id}
-      userName={session.user.name ?? null}
-      userImage={session.user.image ?? null}
-    />
-  )
+  return <LandingPage />
 }

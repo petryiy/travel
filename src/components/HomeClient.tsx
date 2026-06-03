@@ -6,7 +6,7 @@ import { CanvasPanel } from '@/components/canvas/CanvasPanel'
 import { UserMenu } from '@/components/auth/UserMenu'
 
 interface Props {
-  userId: string
+  userId: string | null
   userName: string | null
   userImage: string | null
 }

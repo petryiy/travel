@@ -27,7 +27,7 @@ function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
   }
 }
 
-export function useChat(userId: string) {
+export function useChat(userId: string | null) {
   const [messages, setMessages] = useState<Message[]>([])
   const [canvasState, setCanvasState] = useState<CanvasState>('setup')
   const [tripDetails, setTripDetails] = useState<TripDetails | null>(null)
