@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClient } from '@/lib/db'
+import { auth } from '@/auth'
 import type { Itinerary, Message, TripStyle } from '@/types/travel'
 
 interface SaveTripBody {
-  ownerId?: string
   tripId?: string | null
   itinerary?: Itinerary
   messages?: Message[]
@@ -62,9 +62,12 @@ function serializeRowSummary(row: Omit<TripRow, 'itinerary' | 'messages'>) {
   }
 }
 
-export async function GET(req: NextRequest) {
-  const ownerId = req.nextUrl.searchParams.get('ownerId')
-  if (!ownerId) return NextResponse.json({ trips: [] })
+export async function GET(_req: NextRequest) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const ownerId = session.user.id
 
   const client = await getClient()
   try {
@@ -86,10 +89,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { ownerId, tripId, itinerary, messages = [] }: SaveTripBody = await req.json()
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  const ownerId = session.user.id
 
-  if (!ownerId || !itinerary) {
-    return NextResponse.json({ error: 'ownerId and itinerary are required.' }, { status: 400 })
+  const { tripId, itinerary, messages = [] }: SaveTripBody = await req.json()
+
+  if (!itinerary) {
+    return NextResponse.json({ error: 'itinerary is required.' }, { status: 400 })
   }
 
   const client = await getClient()

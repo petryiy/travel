@@ -12,22 +12,6 @@ import type {
   SavedTripSummary,
 } from '@/types/travel'
 
-const OWNER_ID_STORAGE_KEY = 'travel-planner-owner-id'
-
-function getOrCreateOwnerId() {
-  const stored = window.localStorage.getItem(OWNER_ID_STORAGE_KEY)
-
-  if (stored) return stored
-
-  const id =
-    typeof window.crypto?.randomUUID === 'function'
-      ? window.crypto.randomUUID()
-      : `anon_${Date.now()}_${Math.random().toString(36).slice(2)}`
-
-  window.localStorage.setItem(OWNER_ID_STORAGE_KEY, id)
-  return id
-}
-
 function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
   return {
     id: trip.id,
@@ -43,17 +27,13 @@ function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
   }
 }
 
-export function useChat() {
+export function useChat(userId: string) {
   const [messages, setMessages] = useState<Message[]>([])
   const [canvasState, setCanvasState] = useState<CanvasState>('setup')
   const [tripDetails, setTripDetails] = useState<TripDetails | null>(null)
   const [itinerary, setItinerary] = useState<Itinerary | null>(null)
   const [clarification, setClarification] = useState<ClarificationData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [ownerId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return getOrCreateOwnerId()
-  })
   const [savedTripId, setSavedTripId] = useState<string | null>(null)
   const [savedTrips, setSavedTrips] = useState<SavedTripSummary[]>([])
   const [isSaving, setIsSaving] = useState(false)
@@ -61,12 +41,10 @@ export function useChat() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const loadSavedTrips = useCallback(async (id = ownerId) => {
-    if (!id) return
-
+  const loadSavedTrips = useCallback(async () => {
     setIsLoadingTrips(true)
     try {
-      const res = await fetch(`/api/trips?ownerId=${encodeURIComponent(id)}`)
+      const res = await fetch('/api/trips')
       if (!res.ok) throw new Error('Unable to load saved trips')
 
       const data: { trips?: SavedTripSummary[] } = await res.json()
@@ -76,17 +54,14 @@ export function useChat() {
     } finally {
       setIsLoadingTrips(false)
     }
-  }, [ownerId])
+  }, [])
 
   useEffect(() => {
-    if (!ownerId) return
-
     const timer = window.setTimeout(() => {
-      void loadSavedTrips(ownerId)
+      void loadSavedTrips()
     }, 0)
-
     return () => window.clearTimeout(timer)
-  }, [ownerId, loadSavedTrips])
+  }, [loadSavedTrips])
 
   const callGemini = useCallback(async (
     nextMessages: Message[],
@@ -156,7 +131,7 @@ export function useChat() {
   }, [messages, tripDetails, itinerary, callGemini])
 
   const saveCurrentTrip = useCallback(async () => {
-    if (!ownerId || !itinerary) return
+    if (!itinerary) return
 
     setIsSaving(true)
     setSaveStatus(null)
@@ -166,7 +141,7 @@ export function useChat() {
       const res = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerId, tripId: savedTripId, itinerary, messages }),
+        body: JSON.stringify({ tripId: savedTripId, itinerary, messages }),
       })
 
       if (!res.ok) throw new Error('Unable to save trip')
@@ -182,17 +157,15 @@ export function useChat() {
     } finally {
       setIsSaving(false)
     }
-  }, [ownerId, itinerary, savedTripId, messages])
+  }, [itinerary, savedTripId, messages])
 
   const openSavedTrip = useCallback(async (tripId: string) => {
-    if (!ownerId) return
-
     setIsLoadingTrips(true)
     setSaveStatus(null)
     setSaveError(null)
 
     try {
-      const res = await fetch(`/api/trips/${tripId}?ownerId=${encodeURIComponent(ownerId)}`)
+      const res = await fetch(`/api/trips/${tripId}`)
       if (!res.ok) throw new Error('Unable to load trip')
 
       const data: { trip: SavedTrip } = await res.json()
@@ -208,7 +181,7 @@ export function useChat() {
     } finally {
       setIsLoadingTrips(false)
     }
-  }, [ownerId])
+  }, [])
 
   return {
     messages,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClient } from '@/lib/db'
+import { auth } from '@/auth'
 import type { Itinerary, Message, TripStyle } from '@/types/travel'
 
 interface TripRow {
@@ -36,15 +37,16 @@ function serializeRow(row: TripRow) {
 }
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params
-  const ownerId = req.nextUrl.searchParams.get('ownerId')
-
-  if (!ownerId) {
-    return NextResponse.json({ error: 'ownerId is required.' }, { status: 400 })
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const { id } = await context.params
+  const ownerId = session.user.id
 
   const client = await getClient()
   try {

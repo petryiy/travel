@@ -1,47 +1,16 @@
-'use client'
+import { auth } from '@/auth'
+import { redirect } from 'next/navigation'
+import { HomeClient } from '@/components/HomeClient'
 
-import { useChat } from '@/hooks/useChat'
-import { ChatPanel } from '@/components/chat/ChatPanel'
-import { CanvasPanel } from '@/components/canvas/CanvasPanel'
-
-export default function Home() {
-  const {
-    messages,
-    canvasState,
-    itinerary,
-    clarification,
-    isLoading,
-    savedTripId,
-    savedTrips,
-    isSaving,
-    isLoadingTrips,
-    saveStatus,
-    saveError,
-    submitSetup,
-    sendMessage,
-    saveCurrentTrip,
-    openSavedTrip,
-  } = useChat()
+export default async function Home() {
+  const session = await auth()
+  if (!session?.user?.id) redirect('/login')
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <ChatPanel messages={messages} isLoading={isLoading} onSend={sendMessage} hasItinerary={Boolean(itinerary)} />
-      <CanvasPanel
-        canvasState={canvasState}
-        itinerary={itinerary}
-        clarification={clarification}
-        isLoading={isLoading}
-        savedTripId={savedTripId}
-        savedTrips={savedTrips}
-        isSaving={isSaving}
-        isLoadingTrips={isLoadingTrips}
-        saveStatus={saveStatus}
-        saveError={saveError}
-        onSetup={submitSetup}
-        onSend={sendMessage}
-        onSave={saveCurrentTrip}
-        onOpenSavedTrip={openSavedTrip}
-      />
-    </div>
+    <HomeClient
+      userId={session.user.id}
+      userName={session.user.name ?? null}
+      userImage={session.user.image ?? null}
+    />
   )
 }

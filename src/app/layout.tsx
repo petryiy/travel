@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body className="h-full flex flex-col" suppressHydrationWarning>{children}</body>
+      <body className="h-full flex flex-col" suppressHydrationWarning>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
