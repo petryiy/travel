@@ -73,6 +73,7 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {savedTrips.map((trip) => {
               const updatedAt = formatUpdatedAt(trip.updatedAt)
+              const hasCustomTitle = trip.title && trip.title !== trip.destination
 
               return (
                 <button
@@ -84,10 +85,15 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
                   <div className="flex h-full flex-col">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-xl font-bold text-zinc-950">{trip.destination}</p>
+                        <p className="truncate text-xl font-bold text-zinc-950">{trip.title || trip.destination}</p>
                         <p className="mt-1 text-sm text-zinc-500">
                           {formatDateRange(trip.startDate, trip.endDate)}
                         </p>
+                        {hasCustomTitle && (
+                          <p className="mt-1 truncate text-xs font-medium text-zinc-400">
+                            {trip.destination}
+                          </p>
+                        )}
                       </div>
                       <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold capitalize text-indigo-700">
                         {trip.style}

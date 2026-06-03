@@ -225,7 +225,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
                   className="w-full rounded-xl border border-zinc-100 px-3 py-2.5 text-left hover:bg-zinc-50 transition"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-zinc-900 truncate">{trip.destination}</p>
+                    <p className="text-sm font-semibold text-zinc-900 truncate">{trip.title || trip.destination}</p>
                     <span className="text-[11px] text-zinc-400 shrink-0">{trip.travelers} pax</span>
                   </div>
                   <p className="text-xs text-zinc-500 truncate mt-0.5">

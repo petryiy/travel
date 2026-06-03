@@ -4,6 +4,7 @@ import type { CanvasState, TripDetails, Itinerary, ClarificationData, SavedTripS
 import { SetupForm } from './SetupForm'
 import { ClarificationCard } from './ClarificationCard'
 import { ItineraryDashboard } from './ItineraryDashboard'
+import { ItineraryOverview } from './ItineraryOverview'
 
 interface Props {
   canvasState: CanvasState
@@ -11,15 +12,20 @@ interface Props {
   clarification: ClarificationData | null
   isLoading: boolean
   savedTripId: string | null
+  savedTripTitle: string | null
   savedTrips: SavedTripSummary[]
   isSaving: boolean
   isLoadingTrips: boolean
   saveStatus: string | null
   saveError: string | null
+  presentationMode: 'overview' | 'edit'
   onSetup: (details: TripDetails) => void
   onSend: (text: string) => void
   onSave: () => void
   onOpenSavedTrip: (tripId: string) => void
+  onRenameSavedTrip: (title: string) => Promise<boolean>
+  onPresentationModeChange: (mode: 'overview' | 'edit') => void
+  onBackToDashboard: () => void
 }
 
 export function CanvasPanel({
@@ -28,15 +34,20 @@ export function CanvasPanel({
   clarification,
   isLoading,
   savedTripId,
+  savedTripTitle,
   savedTrips,
   isSaving,
   isLoadingTrips,
   saveStatus,
   saveError,
+  presentationMode,
   onSetup,
   onSend,
   onSave,
   onOpenSavedTrip,
+  onRenameSavedTrip,
+  onPresentationModeChange,
+  onBackToDashboard,
 }: Props) {
   if (canvasState === 'setup') {
     return (
@@ -66,6 +77,18 @@ export function CanvasPanel({
   }
 
   if (canvasState === 'itinerary' && itinerary) {
+    if (presentationMode === 'overview') {
+      return (
+        <ItineraryOverview
+          itinerary={itinerary}
+          savedTripTitle={savedTripTitle}
+          onBackToDashboard={onBackToDashboard}
+          onEdit={() => onPresentationModeChange('edit')}
+          onRenameTitle={onRenameSavedTrip}
+        />
+      )
+    }
+
     return (
       <ItineraryDashboard
         itinerary={itinerary}

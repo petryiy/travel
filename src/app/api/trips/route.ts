@@ -94,19 +94,20 @@ export async function POST(req: NextRequest) {
 
   const client = await getClient()
   try {
-    const title = titleFor(itinerary)
+    const defaultTitle = titleFor(itinerary)
     const { destination, startDate, endDate, travelers, style } = itinerary.trip
     const now = new Date()
 
     let row: TripRow
 
     if (tripId) {
-      const existing = await client.query<{ id: string }>(
-        'SELECT id FROM trips WHERE id = $1 AND owner_id = $2',
+      const existing = await client.query<{ id: string; title: string }>(
+        'SELECT id, title FROM trips WHERE id = $1 AND owner_id = $2',
         [tripId, ownerId]
       )
 
       if (existing.rows.length > 0) {
+        const title = existing.rows[0].title || defaultTitle
         const { rows } = await client.query<TripRow>(
           `UPDATE trips
            SET title=$1, destination=$2, start_date=$3, end_date=$4, travelers=$5,
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
           `INSERT INTO trips (id, owner_id, title, destination, start_date, end_date, travelers, style, summary, itinerary, messages, created_at, updated_at)
            VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9::json, $10::json, $11, $11)
            RETURNING *`,
-          [ownerId, title, destination, startDate, endDate, travelers, style,
+          [ownerId, defaultTitle, destination, startDate, endDate, travelers, style,
            itinerary.summary, JSON.stringify(itinerary), JSON.stringify(messages), now]
         )
         row = rows[0]
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
         `INSERT INTO trips (id, owner_id, title, destination, start_date, end_date, travelers, style, summary, itinerary, messages, created_at, updated_at)
          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
          RETURNING *`,
-        [ownerId, title, destination, startDate, endDate, travelers, style,
+        [ownerId, defaultTitle, destination, startDate, endDate, travelers, style,
          itinerary.summary, JSON.stringify(itinerary), JSON.stringify(messages), now]
       )
       row = rows[0]

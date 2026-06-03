@@ -8,6 +8,7 @@ import { Dashboard } from '@/components/dashboard/Dashboard'
 
 export default function Home() {
   const [view, setView] = useState<'dashboard' | 'planner'>('dashboard')
+  const [presentationMode, setPresentationMode] = useState<'overview' | 'edit'>('edit')
   const {
     messages,
     canvasState,
@@ -15,6 +16,7 @@ export default function Home() {
     clarification,
     isLoading,
     savedTripId,
+    savedTripTitle,
     savedTrips,
     isSaving,
     isLoadingTrips,
@@ -25,16 +27,23 @@ export default function Home() {
     sendMessage,
     saveCurrentTrip,
     openSavedTrip,
+    renameSavedTripTitle,
   } = useChat()
 
   function handleNewTrip() {
     startNewTrip()
+    setPresentationMode('edit')
     setView('planner')
   }
 
   function handleOpenSavedTrip(tripId: string) {
+    setPresentationMode('overview')
     setView('planner')
     void openSavedTrip(tripId)
+  }
+
+  function handleBackToDashboard() {
+    setView('dashboard')
   }
 
   if (view === 'dashboard') {
@@ -48,30 +57,39 @@ export default function Home() {
     )
   }
 
+  const showChatPanel = presentationMode === 'edit'
+
   return (
     <div className="flex h-full overflow-hidden">
-      <ChatPanel
-        messages={messages}
-        isLoading={isLoading}
-        onSend={sendMessage}
-        hasItinerary={Boolean(itinerary)}
-        onBackToDashboard={() => setView('dashboard')}
-      />
+      {showChatPanel && (
+        <ChatPanel
+          messages={messages}
+          isLoading={isLoading}
+          onSend={sendMessage}
+          hasItinerary={Boolean(itinerary)}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      )}
       <CanvasPanel
         canvasState={canvasState}
         itinerary={itinerary}
         clarification={clarification}
         isLoading={isLoading}
         savedTripId={savedTripId}
+        savedTripTitle={savedTripTitle}
         savedTrips={savedTrips}
         isSaving={isSaving}
         isLoadingTrips={isLoadingTrips}
         saveStatus={saveStatus}
         saveError={saveError}
+        presentationMode={presentationMode}
         onSetup={submitSetup}
         onSend={sendMessage}
         onSave={saveCurrentTrip}
         onOpenSavedTrip={handleOpenSavedTrip}
+        onRenameSavedTrip={renameSavedTripTitle}
+        onPresentationModeChange={setPresentationMode}
+        onBackToDashboard={handleBackToDashboard}
       />
     </div>
   )
