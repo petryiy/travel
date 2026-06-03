@@ -148,6 +148,17 @@ export function useChat() {
     await callGemini([opener], details)
   }, [callGemini])
 
+  const startNewTrip = useCallback(() => {
+    setMessages([])
+    setCanvasState('setup')
+    setTripDetails(null)
+    setItinerary(null)
+    setClarification(null)
+    setSavedTripId(null)
+    setSaveStatus(null)
+    setSaveError(null)
+  }, [])
+
   const sendMessage = useCallback(async (text: string) => {
     const userMessage: Message = { role: 'user', content: text }
     const nextMessages = [...messages, userMessage]
@@ -224,6 +235,7 @@ export function useChat() {
     saveStatus,
     saveError,
     submitSetup,
+    startNewTrip,
     sendMessage,
     saveCurrentTrip,
     openSavedTrip,
