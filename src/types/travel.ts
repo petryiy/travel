@@ -61,6 +61,7 @@ export interface Itinerary {
   days: DayPlan[]
   tips: string[]
   summary: string
+  posterCaption?: string
   mapCenter: { lat: number; lng: number }
   keyLocations: KeyLocation[]
 }

@@ -35,6 +35,7 @@ export function useChat(userId: string | null) {
   const [clarification, setClarification] = useState<ClarificationData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [savedTripId, setSavedTripId] = useState<string | null>(null)
+  const [savedTripTitle, setSavedTripTitle] = useState<string | null>(null)
   const [savedTrips, setSavedTrips] = useState<SavedTripSummary[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingTrips, setIsLoadingTrips] = useState(false)
@@ -108,6 +109,7 @@ export function useChat(userId: string | null) {
   const submitSetup = useCallback(async (details: TripDetails) => {
     setTripDetails(details)
     setSavedTripId(null)
+    setSavedTripTitle(null)
     setItinerary(null)
     setClarification(null)
     setSaveStatus(null)
@@ -122,6 +124,18 @@ export function useChat(userId: string | null) {
     setMessages([opener])
     await callGemini([opener], details)
   }, [callGemini])
+
+  const startNewTrip = useCallback(() => {
+    setMessages([])
+    setCanvasState('setup')
+    setTripDetails(null)
+    setItinerary(null)
+    setClarification(null)
+    setSavedTripId(null)
+    setSavedTripTitle(null)
+    setSaveStatus(null)
+    setSaveError(null)
+  }, [])
 
   const sendMessage = useCallback(async (text: string) => {
     const userMessage: Message = { role: 'user', content: text }
@@ -150,6 +164,9 @@ export function useChat(userId: string | null) {
       const summary = toSavedTripSummary(data.trip)
 
       setSavedTripId(data.trip.id)
+      setSavedTripTitle(data.trip.title)
+      setItinerary(data.trip.itinerary)
+      setTripDetails(data.trip.itinerary.trip)
       setSavedTrips((prev) => [summary, ...prev.filter((trip) => trip.id !== summary.id)])
       setSaveStatus('Saved to Aurora DSQL')
     } catch {
@@ -163,6 +180,9 @@ export function useChat(userId: string | null) {
     setIsLoadingTrips(true)
     setSaveStatus(null)
     setSaveError(null)
+    setCanvasState('loading')
+    setItinerary(null)
+    setClarification(null)
 
     try {
       const res = await fetch(`/api/trips/${tripId}`)
@@ -170,6 +190,7 @@ export function useChat(userId: string | null) {
 
       const data: { trip: SavedTrip } = await res.json()
       setSavedTripId(data.trip.id)
+      setSavedTripTitle(data.trip.title)
       setMessages(data.trip.messages)
       setItinerary(data.trip.itinerary)
       setTripDetails(data.trip.itinerary.trip)
@@ -178,10 +199,43 @@ export function useChat(userId: string | null) {
       setSaveStatus('Loaded saved trip')
     } catch {
       setSaveError('Could not open this saved trip.')
+      setCanvasState('setup')
     } finally {
       setIsLoadingTrips(false)
     }
   }, [])
+
+  const renameSavedTripTitle = useCallback(async (title: string) => {
+    if (!ownerId || !savedTripId) return false
+
+    const cleanTitle = title.trim()
+    if (!cleanTitle) {
+      setSaveError('Trip title cannot be empty.')
+      return false
+    }
+
+    setSaveStatus(null)
+    setSaveError(null)
+
+    try {
+      const res = await fetch(`/api/trips/${savedTripId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerId, title: cleanTitle }),
+      })
+
+      if (!res.ok) throw new Error('Unable to rename trip')
+
+      const data: { trip: SavedTripSummary } = await res.json()
+      setSavedTripTitle(data.trip.title)
+      setSavedTrips((prev) => [data.trip, ...prev.filter((trip) => trip.id !== data.trip.id)])
+      setSaveStatus('Renamed trip')
+      return true
+    } catch {
+      setSaveError('Could not rename this trip.')
+      return false
+    }
+  }, [ownerId, savedTripId])
 
   return {
     messages,
@@ -191,14 +245,17 @@ export function useChat(userId: string | null) {
     clarification,
     isLoading,
     savedTripId,
+    savedTripTitle,
     savedTrips,
     isSaving,
     isLoadingTrips,
     saveStatus,
     saveError,
     submitSetup,
+    startNewTrip,
     sendMessage,
     saveCurrentTrip,
     openSavedTrip,
+    renameSavedTripTitle,
   }
 }
