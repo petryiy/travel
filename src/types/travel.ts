@@ -82,7 +82,7 @@ export interface GeminiResponse {
   canvas: GeminiCanvas
 }
 
-export type CanvasState = 'setup' | 'loading' | 'clarification' | 'itinerary'
+export type CanvasState = 'setup' | 'loading' | 'clarification' | 'itinerary' | 'error'
 
 export interface SavedTripSummary {
   id: string

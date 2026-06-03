@@ -100,7 +100,7 @@ export function useChat(userId: string | null) {
     } catch {
       const errMsg: Message = { role: 'assistant', content: "Sorry, something went wrong. Please try again." }
       setMessages((prev) => [...prev, errMsg])
-      setCanvasState('clarification')
+      setCanvasState('error')
     } finally {
       setIsLoading(false)
     }
@@ -205,8 +205,13 @@ export function useChat(userId: string | null) {
     }
   }, [])
 
+  const retry = useCallback(async () => {
+    if (messages.length === 0) return
+    await callGemini(messages, tripDetails ?? undefined, itinerary)
+  }, [messages, tripDetails, itinerary, callGemini])
+
   const renameSavedTripTitle = useCallback(async (title: string) => {
-    if (!ownerId || !savedTripId) return false
+    if (!userId || !savedTripId) return false
 
     const cleanTitle = title.trim()
     if (!cleanTitle) {
@@ -221,7 +226,7 @@ export function useChat(userId: string | null) {
       const res = await fetch(`/api/trips/${savedTripId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerId, title: cleanTitle }),
+        body: JSON.stringify({ ownerId: userId, title: cleanTitle }),
       })
 
       if (!res.ok) throw new Error('Unable to rename trip')
@@ -235,7 +240,7 @@ export function useChat(userId: string | null) {
       setSaveError('Could not rename this trip.')
       return false
     }
-  }, [ownerId, savedTripId])
+  }, [userId, savedTripId])
 
   return {
     messages,
@@ -257,5 +262,6 @@ export function useChat(userId: string | null) {
     saveCurrentTrip,
     openSavedTrip,
     renameSavedTripTitle,
+    retry,
   }
 }

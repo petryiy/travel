@@ -10,7 +10,8 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/guest') ||
-    pathname.startsWith('/api/auth')
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/chat')
 
   if (isPublic) return NextResponse.next()
 
