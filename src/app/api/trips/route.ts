@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClient } from '@/lib/db'
+import { createPosterCaption } from '@/lib/posterCaption'
 import type { Itinerary, Message, TripStyle } from '@/types/travel'
 
 interface SaveTripBody {
@@ -28,6 +29,13 @@ interface TripRow {
 function titleFor(itinerary: Itinerary) {
   const { destination, startDate, endDate } = itinerary.trip
   return `${destination} · ${startDate} to ${endDate}`
+}
+
+async function itineraryWithPosterCaption(itinerary: Itinerary, title: string) {
+  return {
+    ...itinerary,
+    posterCaption: await createPosterCaption(itinerary, title),
+  }
 }
 
 function serializeRow(row: TripRow) {
@@ -108,6 +116,7 @@ export async function POST(req: NextRequest) {
 
       if (existing.rows.length > 0) {
         const title = existing.rows[0].title || defaultTitle
+        const itineraryToSave = await itineraryWithPosterCaption(itinerary, title)
         const { rows } = await client.query<TripRow>(
           `UPDATE trips
            SET title=$1, destination=$2, start_date=$3, end_date=$4, travelers=$5,
@@ -115,27 +124,29 @@ export async function POST(req: NextRequest) {
            WHERE id=$11
            RETURNING *`,
           [title, destination, startDate, endDate, travelers, style,
-           itinerary.summary, JSON.stringify(itinerary), JSON.stringify(messages),
+           itineraryToSave.summary, JSON.stringify(itineraryToSave), JSON.stringify(messages),
            now, existing.rows[0].id]
         )
         row = rows[0]
       } else {
+        const itineraryToSave = await itineraryWithPosterCaption(itinerary, defaultTitle)
         const { rows } = await client.query<TripRow>(
           `INSERT INTO trips (id, owner_id, title, destination, start_date, end_date, travelers, style, summary, itinerary, messages, created_at, updated_at)
            VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9::json, $10::json, $11, $11)
            RETURNING *`,
           [ownerId, defaultTitle, destination, startDate, endDate, travelers, style,
-           itinerary.summary, JSON.stringify(itinerary), JSON.stringify(messages), now]
+           itineraryToSave.summary, JSON.stringify(itineraryToSave), JSON.stringify(messages), now]
         )
         row = rows[0]
       }
     } else {
+      const itineraryToSave = await itineraryWithPosterCaption(itinerary, defaultTitle)
       const { rows } = await client.query<TripRow>(
         `INSERT INTO trips (id, owner_id, title, destination, start_date, end_date, travelers, style, summary, itinerary, messages, created_at, updated_at)
          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
          RETURNING *`,
         [ownerId, defaultTitle, destination, startDate, endDate, travelers, style,
-         itinerary.summary, JSON.stringify(itinerary), JSON.stringify(messages), now]
+         itineraryToSave.summary, JSON.stringify(itineraryToSave), JSON.stringify(messages), now]
       )
       row = rows[0]
     }

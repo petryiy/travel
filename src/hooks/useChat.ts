@@ -190,6 +190,8 @@ export function useChat() {
 
       setSavedTripId(data.trip.id)
       setSavedTripTitle(data.trip.title)
+      setItinerary(data.trip.itinerary)
+      setTripDetails(data.trip.itinerary.trip)
       setSavedTrips((prev) => [summary, ...prev.filter((trip) => trip.id !== summary.id)])
       setSaveStatus('Saved to Aurora DSQL')
     } catch {

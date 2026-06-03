@@ -4,7 +4,9 @@ import { useMemo, useState } from 'react'
 import type { Activity, DayPlan, Itinerary } from '@/types/travel'
 import { downloadItineraryMarkdown } from '@/lib/itineraryExport'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
+import { createItineraryPosterDataUrl } from '@/lib/posterExport'
 import { MapView } from './MapView'
+import { PosterExportModal } from './PosterExportModal'
 
 const TYPE_STYLES: Record<Activity['type'], string> = {
   food: 'bg-[#f8dfad] text-[#765320]',
@@ -75,12 +77,19 @@ function getTripLocations(itinerary: Itinerary) {
   return dayLocations.length > 0 ? dayLocations : itinerary.keyLocations
 }
 
+function fallbackPosterCaption(itinerary: Itinerary) {
+  return `A softer way to meet ${itinerary.trip.destination}, one gentle moment at a time.`
+}
+
 export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard, onEdit, onRenameTitle }: Props) {
   const title = savedTripTitle ?? itinerary.trip.destination
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
   const [isSavingTitle, setIsSavingTitle] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
+  const [isPosterOpen, setIsPosterOpen] = useState(false)
+  const [posterDataUrl, setPosterDataUrl] = useState<string | null>(null)
+  const [posterError, setPosterError] = useState<string | null>(null)
   const mapLocations = useMemo(() => getTripLocations(itinerary), [itinerary])
   const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
   const activityCount = itinerary.days.reduce((total, day) => total + day.activities.length, 0)
@@ -127,6 +136,21 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
     setDraftTitle(title)
     setTitleError(null)
     setIsEditingTitle(false)
+  }
+
+  async function handleOpenPoster() {
+    setPosterDataUrl(null)
+    setPosterError(null)
+    setIsPosterOpen(true)
+
+    try {
+      const caption = itinerary.posterCaption ?? fallbackPosterCaption(itinerary)
+      setPosterDataUrl(await createItineraryPosterDataUrl(itinerary, { title, caption }))
+      setPosterError(null)
+    } catch {
+      setPosterDataUrl(null)
+      setPosterError('Could not create the poster preview.')
+    }
   }
 
   return (
@@ -272,8 +296,15 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
               </dl>
               <button
                 type="button"
+                onClick={() => void handleOpenPoster()}
+                className="journal-sketch mt-4 w-full rounded-lg bg-[#3f3428] px-4 py-3 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938]"
+              >
+                Export poster
+              </button>
+              <button
+                type="button"
                 onClick={() => downloadItineraryMarkdown(itinerary)}
-                className="journal-sketch mt-4 w-full rounded-lg bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#5e4932] transition hover:bg-white"
+                className="journal-sketch mt-3 w-full rounded-lg bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#5e4932] transition hover:bg-white"
               >
                 Export .md
               </button>
@@ -370,6 +401,13 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
           </aside>
         </section>
       </div>
+      <PosterExportModal
+        title={title}
+        dataUrl={posterDataUrl}
+        error={posterError}
+        open={isPosterOpen}
+        onClose={() => setIsPosterOpen(false)}
+      />
     </main>
   )
 }
