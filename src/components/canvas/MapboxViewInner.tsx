@@ -8,6 +8,7 @@ import type { KeyLocation } from '@/types/travel'
 interface Props {
   center: { lat: number; lng: number }
   locations: KeyLocation[]
+  onError?: () => void
 }
 
 const TYPE_EMOJI: Record<string, string> = {
@@ -18,7 +19,7 @@ const TYPE_EMOJI: Record<string, string> = {
   transport: '🚉',
 }
 
-export default function MapboxViewInner({ center, locations }: Props) {
+export default function MapboxViewInner({ center, locations, onError }: Props) {
   const [popupIndex, setPopupIndex] = useState<number | null>(null)
   const activePopup = popupIndex === null ? null : locations[popupIndex]
 
@@ -29,6 +30,10 @@ export default function MapboxViewInner({ center, locations }: Props) {
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/outdoors-v12"
       mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+      onError={(e) => {
+        console.error('Mapbox error, falling back to Google Maps:', e?.error ?? e)
+        onError?.()
+      }}
     >
       <NavigationControl position="top-right" />
 
