@@ -14,23 +14,23 @@ interface Props {
 
 export function ChatPanel({ messages, isLoading, onSend, hasItinerary = false, onBackToDashboard }: Props) {
   return (
-    <div className="w-[400px] shrink-0 flex flex-col border-r border-zinc-200 bg-white">
-      <div className="px-5 py-4 border-b border-zinc-200">
+    <div className="flex w-[410px] shrink-0 flex-col border-r border-[#dfd4c5] bg-[#f6efe3]">
+      <div className="border-b border-[#dfd4c5] px-5 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex shrink-0 items-center justify-center text-white text-sm font-bold">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#3f5f4c] text-sm font-bold text-[#fffaf0] shadow-sm">
               G
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-zinc-900">Gemini Travel Agent</p>
-              <p className="truncate text-xs text-zinc-400">{hasItinerary ? 'Ready to refine your itinerary' : 'Powered by Google AI'}</p>
+              <p className="truncate text-sm font-semibold text-[#35291d]">Agent notebook</p>
+              <p className="truncate text-xs text-[#8a7965]">{hasItinerary ? 'Refine the plan with your travel agent' : 'Start with the trip basics'}</p>
             </div>
           </div>
           {onBackToDashboard && (
             <button
               type="button"
               onClick={onBackToDashboard}
-              className="shrink-0 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50"
+              className="shrink-0 rounded-full border border-[#d6c9b8] bg-[#fffaf1] px-3 py-1.5 text-xs font-semibold text-[#66523b] shadow-sm transition hover:border-[#bda98d] hover:bg-white"
             >
               Dashboard
             </button>

@@ -69,14 +69,15 @@ export function HomeClient({ userId, userName, userImage }: Props) {
 
   return (
     <>
-      <div className="flex h-full flex-col overflow-hidden">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-zinc-200 bg-white shrink-0">
+      <div className="flex h-full flex-col overflow-hidden bg-[#f4efe7]">
+        <header className="flex items-center justify-between border-b border-[#dfd4c5] bg-[#fbf7ef] px-5 py-3 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset] shrink-0">
           <button
             type="button"
             onClick={handleBackToDashboard}
-            className="text-sm font-semibold text-zinc-900 transition hover:text-indigo-600"
+            className="group inline-flex items-center gap-2 text-sm font-semibold text-[#3e3021] transition hover:text-[#5f7d59]"
           >
-            Travel Planner
+            <span className="h-2.5 w-2.5 rounded-full bg-[#6f8a68] shadow-[0_0_0_4px_rgba(111,138,104,0.16)] transition group-hover:scale-110" />
+            MeetU
           </button>
           <UserMenu name={userName} image={userImage} />
         </header>
