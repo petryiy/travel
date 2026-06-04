@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useChat } from '@/hooks/useChat'
 import { ChatPanel } from '@/components/chat/ChatPanel'
 import { CanvasPanel } from '@/components/canvas/CanvasPanel'
+import { Dashboard } from '@/components/dashboard/Dashboard'
 import { UserMenu } from '@/components/auth/UserMenu'
 import { GuestSaveModal } from '@/components/auth/GuestSaveModal'
 
@@ -15,6 +16,7 @@ interface Props {
 
 export function HomeClient({ userId, userName, userImage }: Props) {
   const [showGuestModal, setShowGuestModal] = useState(false)
+  const [view, setView] = useState<'dashboard' | 'planner'>('dashboard')
   const [presentationMode, setPresentationMode] = useState<'overview' | 'edit'>('edit')
 
   const {
@@ -31,6 +33,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     saveStatus,
     saveError,
     submitSetup,
+    startNewTrip,
     sendMessage,
     saveCurrentTrip,
     openSavedTrip,
@@ -46,44 +49,80 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     void saveCurrentTrip()
   }
 
+  function handleNewTrip() {
+    startNewTrip()
+    setPresentationMode('edit')
+    setView('planner')
+  }
+
+  // Opening a saved plan lands on the read-only overview first; the user can
+  // switch to edit mode from there.
+  function handleOpenTrip(tripId: string) {
+    setPresentationMode('overview')
+    setView('planner')
+    void openSavedTrip(tripId)
+  }
+
+  function handleBackToDashboard() {
+    setView('dashboard')
+  }
+
   return (
     <>
       <div className="flex h-full flex-col overflow-hidden">
         <header className="flex items-center justify-between px-5 py-3 border-b border-zinc-200 bg-white shrink-0">
-          <span className="text-sm font-semibold text-zinc-900">Travel Planner</span>
+          <button
+            type="button"
+            onClick={handleBackToDashboard}
+            className="text-sm font-semibold text-zinc-900 transition hover:text-indigo-600"
+          >
+            Travel Planner
+          </button>
           <UserMenu name={userName} image={userImage} />
         </header>
 
-        <div className="flex flex-1 overflow-hidden">
-          <ChatPanel
-            messages={messages}
-            isLoading={isLoading}
-            onSend={sendMessage}
-            hasItinerary={Boolean(itinerary)}
-          />
-          <CanvasPanel
-            canvasState={canvasState}
-            itinerary={itinerary}
-            clarification={clarification}
-            isLoading={isLoading}
-            savedTripId={savedTripId}
-            savedTripTitle={savedTripTitle}
+        {view === 'dashboard' ? (
+          <Dashboard
             savedTrips={savedTrips}
-            isSaving={isSaving}
             isLoadingTrips={isLoadingTrips}
-            saveStatus={saveStatus}
-            saveError={saveError}
-            presentationMode={presentationMode}
-            onSetup={submitSetup}
-            onSend={sendMessage}
-            onSave={handleSave}
-            onOpenSavedTrip={openSavedTrip}
-            onRenameSavedTrip={renameSavedTripTitle}
-            onPresentationModeChange={setPresentationMode}
-            onBackToDashboard={() => {}}
-            onRetry={retry}
+            onNewTrip={handleNewTrip}
+            onOpenTrip={handleOpenTrip}
           />
-        </div>
+        ) : (
+          <div className="flex flex-1 overflow-hidden">
+            {presentationMode === 'edit' && (
+              <ChatPanel
+                messages={messages}
+                isLoading={isLoading}
+                onSend={sendMessage}
+                hasItinerary={Boolean(itinerary)}
+                onBackToDashboard={handleBackToDashboard}
+              />
+            )}
+            <CanvasPanel
+              canvasState={canvasState}
+              itinerary={itinerary}
+              clarification={clarification}
+              isLoading={isLoading}
+              savedTripId={savedTripId}
+              savedTripTitle={savedTripTitle}
+              savedTrips={savedTrips}
+              isSaving={isSaving}
+              isLoadingTrips={isLoadingTrips}
+              saveStatus={saveStatus}
+              saveError={saveError}
+              presentationMode={presentationMode}
+              onSetup={submitSetup}
+              onSend={sendMessage}
+              onSave={handleSave}
+              onOpenSavedTrip={handleOpenTrip}
+              onRenameSavedTrip={renameSavedTripTitle}
+              onPresentationModeChange={setPresentationMode}
+              onBackToDashboard={handleBackToDashboard}
+              onRetry={retry}
+            />
+          </div>
+        )}
       </div>
 
       {showGuestModal && (
