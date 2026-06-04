@@ -16,6 +16,9 @@ type View = "landing" | "login" | "register";
 
 const DESTINATIONS = ["Paris", "Tokyo", "Bali", "Rome", "Santorini", "Bangkok", "Sydney", "Dubai", "Kyoto", "Maldives"];
 
+// Nature healing palette
+const BG = "#F2F5EE";
+
 interface LandingPageProps {
   initialView?: View;
   callbackUrl?: string;
@@ -27,14 +30,12 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
   const [view, setView] = useState<View>(initialView);
   const [contentVisible, setContentVisible] = useState(true);
 
-  // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Destination rotation (landing view only)
   const [destIndex, setDestIndex] = useState(0);
   const [destVisible, setDestVisible] = useState(true);
 
@@ -95,12 +96,11 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
     router.refresh();
   }
 
-  // ── Shared input / button classes ────────────────────────────────────────
-  const inputCls = "w-full rounded-xl bg-white/[0.05] border border-white/[0.08] px-4 py-2.5 text-sm text-white/90 placeholder:text-white/20 outline-none focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/30 transition";
-  const labelCls = "block text-[11px] font-light tracking-[0.12em] uppercase text-white/40";
-  const primaryBtn = "group w-full flex items-center justify-center gap-3 rounded-full bg-white pl-7 pr-2 py-2.5 text-sm font-medium tracking-wide text-black transition-all duration-500 hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] disabled:opacity-50 active:scale-[0.98]";
+  const inputCls = "w-full rounded-xl bg-[#F6FAF4] border border-[#C8D9BF] px-4 py-2.5 text-sm text-[#2A3226] placeholder:text-[#A8B8A0] outline-none focus:border-[#68A058] focus:ring-2 focus:ring-[#68A058]/20 transition";
+  const labelCls = "block text-[11px] font-light tracking-[0.12em] uppercase text-[#96AB8E]";
+  const primaryBtn = "group w-full flex items-center justify-center gap-3 rounded-full bg-[#68A058] pl-7 pr-2 py-2.5 text-sm font-medium tracking-wide text-white transition-all duration-500 hover:bg-[#5B9249] hover:shadow-[0_6px_24px_rgba(104,160,88,0.38)] disabled:opacity-50 active:scale-[0.98]";
   const arrowIcon = (
-    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black/[0.06] transition-transform duration-500 group-hover:translate-x-0.5 group-hover:scale-105">
+    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:scale-105">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
       </svg>
@@ -108,7 +108,7 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
   );
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen overflow-hidden" style={{ background: "#0a0f1a" }}>
+    <div className="flex flex-col lg:flex-row h-screen overflow-hidden" style={{ background: BG }}>
       {/* Left — DomeGallery (never unmounts = keeps spinning across view changes) */}
       <div className="relative hidden lg:block lg:h-screen overflow-hidden lg:w-[70%]">
         <DomeGallery
@@ -118,19 +118,18 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
           maxRadius={2400}
           segments={40}
           grayscale={false}
-          overlayBlurColor="#0a0f1a"
+          overlayBlurColor={BG}
           autoRotateSpeed={0.02}
         />
         <div
           className="absolute top-0 right-0 h-full pointer-events-none z-10"
-          style={{ width: "clamp(80px, 15vw, 200px)", background: "linear-gradient(to right, transparent, #0a0f1a)" }}
+          style={{ width: "clamp(80px, 15vw, 200px)", background: `linear-gradient(to right, transparent, ${BG})` }}
         />
       </div>
 
-      {/* Right — panel (animate-fade-blur plays once on mount only) */}
+      {/* Right — panel */}
       <div className="relative h-screen w-full lg:w-[30%] flex flex-col items-center justify-center px-6 sm:px-8 lg:px-10 overflow-y-auto py-10">
         <div className="animate-fade-blur w-full flex flex-col items-center" style={{ animationDelay: "0.05s" }}>
-          {/* Inner div transitions between views without re-triggering the initial animation */}
           <div
             className="w-full flex flex-col items-center"
             style={{
@@ -151,14 +150,13 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
             {view === "login" && (
               <AuthCard
                 title="Welcome back"
-                subtitle="Sign in to your Travel Planner account"
+                subtitle="Continue your journey"
                 onBack={() => switchView("landing")}
               >
-                {/* Google */}
                 <button
                   type="button"
                   onClick={handleGoogle}
-                  className="w-full flex items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white/70 transition-all duration-300 hover:bg-white/[0.08] hover:border-white/20 active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2.5 rounded-full border border-[#C8D9BF] bg-white px-4 py-2.5 text-sm font-medium text-[#486040] transition-all duration-300 hover:bg-[#EEF5EA] hover:border-[#68A058]/50 active:scale-[0.98]"
                 >
                   <GoogleIcon />
                   Continue with Google
@@ -173,16 +171,16 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
                   <Field label="Password" labelCls={labelCls}>
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" className={inputCls} />
                   </Field>
-                  {error && <p className="text-[12px] text-rose-400/90">{error}</p>}
+                  {error && <p className="text-[12px] text-rose-500/90">{error}</p>}
                   <button type="submit" disabled={isLoading} className={primaryBtn}>
                     {isLoading ? "Signing in…" : "Sign in"}
                     {arrowIcon}
                   </button>
                 </form>
 
-                <p className="text-center text-[12px] text-white/30">
+                <p className="text-center text-[12px] text-[#96AB8E]">
                   No account?{" "}
-                  <button onClick={() => switchView("register")} className="text-white/60 hover:text-white/90 transition-colors duration-200">
+                  <button onClick={() => switchView("register")} className="text-[#486040] hover:text-[#2A3226] font-medium transition-colors duration-200">
                     Sign up
                   </button>
                 </p>
@@ -205,16 +203,16 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
                   <Field label="Password" labelCls={labelCls}>
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" className={inputCls} />
                   </Field>
-                  {error && <p className="text-[12px] text-rose-400/90">{error}</p>}
+                  {error && <p className="text-[12px] text-rose-500/90">{error}</p>}
                   <button type="submit" disabled={isLoading} className={primaryBtn}>
                     {isLoading ? "Creating account…" : "Create account"}
                     {arrowIcon}
                   </button>
                 </form>
 
-                <p className="text-center text-[12px] text-white/30">
+                <p className="text-center text-[12px] text-[#96AB8E]">
                   Already have an account?{" "}
-                  <button onClick={() => switchView("login")} className="text-white/60 hover:text-white/90 transition-colors duration-200">
+                  <button onClick={() => switchView("login")} className="text-[#486040] hover:text-[#2A3226] font-medium transition-colors duration-200">
                     Sign in
                   </button>
                 </p>
@@ -242,7 +240,7 @@ function LandingContent({
 }) {
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-[220px]">
-      <div className="w-24 h-24 rounded-2xl overflow-hidden">
+      <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(104,160,88,0.22)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/MeetU_Logo.jpg" alt="MeetU Logo" className="w-full h-full object-cover" />
       </div>
@@ -257,15 +255,15 @@ function LandingContent({
         Travel Planner
       </h1>
 
-      <p className="animate-fade-blur text-[13px] font-light tracking-[0.15em] uppercase text-white/40 text-center -mt-2" style={{ animationDelay: "0.2s" }}>
+      <p className="animate-fade-blur text-[13px] font-light tracking-[0.15em] uppercase text-[#96AB8E] text-center -mt-2" style={{ animationDelay: "0.2s" }}>
         AI-powered itineraries
       </p>
 
       <div className="animate-fade-blur flex items-center justify-center gap-1.5 h-6 -mt-2" style={{ animationDelay: "0.3s" }}>
-        <span className="text-[13px] tracking-[0.15em] uppercase font-light text-white/30">for</span>
+        <span className="text-[13px] tracking-[0.15em] uppercase font-light text-[#B2C4A8]">for</span>
         <div className="relative h-5 w-[80px] overflow-hidden">
           <span
-            className="text-[13px] tracking-[0.15em] uppercase font-light text-white/60 absolute left-0 transition-all duration-300"
+            className="text-[13px] tracking-[0.15em] uppercase font-light text-[#486040] absolute left-0 transition-all duration-300"
             style={{
               opacity: destVisible ? 1 : 0,
               transform: destVisible ? "translateY(0)" : "translateY(-12px)",
@@ -277,17 +275,17 @@ function LandingContent({
         </div>
       </div>
 
-      <p className="animate-fade-blur text-base font-light text-white/60 text-center leading-relaxed" style={{ animationDelay: "0.4s" }}>
+      <p className="animate-fade-blur text-base font-light text-[#637860] text-center leading-relaxed" style={{ animationDelay: "0.4s" }}>
         Plan your next adventure with personalized AI itineraries.
       </p>
 
       <div className="animate-fade-blur flex flex-col gap-3 w-full mt-1" style={{ animationDelay: "0.5s" }}>
         <button
           onClick={onLogin}
-          className="group flex items-center justify-center gap-3 rounded-full bg-white pl-7 pr-2 py-2.5 text-sm font-medium tracking-wide text-black transition-all duration-500 hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-[0.98]"
+          className="group flex items-center justify-center gap-3 rounded-full bg-[#68A058] pl-7 pr-2 py-2.5 text-sm font-medium tracking-wide text-white transition-all duration-500 hover:bg-[#5B9249] hover:shadow-[0_6px_28px_rgba(104,160,88,0.42)] active:scale-[0.98]"
         >
           Log in
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black/[0.06] transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-px group-hover:scale-105">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/20 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-px group-hover:scale-105">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
             </svg>
@@ -296,14 +294,14 @@ function LandingContent({
 
         <button
           onClick={onRegister}
-          className="flex items-center justify-center rounded-full border border-white/15 bg-white/[0.04] px-7 py-2.5 text-sm font-medium tracking-wide text-white/80 transition-all duration-300 hover:bg-white/[0.08] hover:border-white/25 active:scale-[0.98]"
+          className="flex items-center justify-center rounded-full border border-[#C8D9BF] bg-white px-7 py-2.5 text-sm font-medium tracking-wide text-[#486040] transition-all duration-300 hover:bg-[#EEF5EA] hover:border-[#68A058]/50 active:scale-[0.98]"
         >
           Sign up
         </button>
 
         <Link
           href="/guest"
-          className="text-center text-[13px] tracking-[0.1em] uppercase font-light text-white/30 hover:text-white/60 transition-colors duration-300 py-1"
+          className="text-center text-[13px] tracking-[0.1em] uppercase font-light text-[#A8B8A0] hover:text-[#637860] transition-colors duration-300 py-1"
         >
           Continue as guest
         </Link>
@@ -325,23 +323,23 @@ function AuthCard({
 }) {
   return (
     <div className="flex flex-col items-center w-full max-w-[300px] gap-5">
-      <button onClick={onBack} className="w-16 h-16 rounded-2xl overflow-hidden hover:opacity-85 transition-opacity">
+      <button onClick={onBack} className="w-16 h-16 rounded-2xl overflow-hidden hover:opacity-85 transition-opacity shadow-[0_4px_16px_rgba(104,160,88,0.18)]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/MeetU_Logo.jpg" alt="MeetU" className="w-full h-full object-cover" />
       </button>
 
       <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-white/90">{title}</h1>
-        <p className="text-[13px] text-white/40 mt-1">{subtitle}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#2A3226]">{title}</h1>
+        <p className="text-[13px] text-[#96AB8E] mt-1">{subtitle}</p>
       </div>
 
-      <div className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 space-y-4">
+      <div className="w-full rounded-2xl border border-[#D0DECA] bg-white shadow-[0_4px_24px_rgba(104,160,88,0.09)] p-5 space-y-4">
         {children}
       </div>
 
       <button
         onClick={onBack}
-        className="text-[11px] tracking-[0.12em] uppercase font-light text-white/25 hover:text-white/50 transition-colors duration-300"
+        className="text-[11px] tracking-[0.12em] uppercase font-light text-[#A8B8A0] hover:text-[#637860] transition-colors duration-300"
       >
         ← Back
       </button>
@@ -361,9 +359,9 @@ function Field({ label, labelCls, children }: { label: string; labelCls: string;
 function Divider() {
   return (
     <div className="flex items-center gap-3">
-      <hr className="flex-1 border-white/[0.07]" />
-      <span className="text-[10px] tracking-[0.15em] uppercase text-white/25">or</span>
-      <hr className="flex-1 border-white/[0.07]" />
+      <hr className="flex-1 border-[#D8E5D0]" />
+      <span className="text-[10px] tracking-[0.15em] uppercase text-[#B2C4A8]">or</span>
+      <hr className="flex-1 border-[#D8E5D0]" />
     </div>
   );
 }

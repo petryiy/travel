@@ -52,7 +52,7 @@ body {
 }
 
 .travel-gradient-text {
-  background: linear-gradient(270deg, #0ea5e9, #38bdf8, #818cf8, #0ea5e9);
+  background: linear-gradient(270deg, #3d8b4e, #6aad5a, #a8d48a, #3d8b4e);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
