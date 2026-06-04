@@ -39,14 +39,8 @@ const TYPE_COLORS: Record<Activity['type'], string> = {
 
 const ACTIVITY_TYPES: Activity['type'][] = ['food', 'attraction', 'transport', 'accommodation', 'activity']
 
-function formatTimeRange(activity: Activity) {
-  if (activity.startTime && activity.endTime) return `${activity.startTime} - ${activity.endTime}`
-  if (activity.startTime) return activity.startTime
-  return activity.time
-}
-
 function dayWindow(dayStart?: string, dayEnd?: string) {
-  if (dayStart && dayEnd) return `${dayStart} - ${dayEnd}`
+  if (dayStart && dayEnd) return `${dayStart}–${dayEnd}`
   if (dayStart) return `from ${dayStart}`
   if (dayEnd) return `until ${dayEnd}`
   return null
@@ -228,13 +222,11 @@ function ActivityCard({
 
   return (
     <div className={`group/card relative min-w-0 flex-1 rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-4 shadow-sm transition ${isDragging ? 'opacity-40' : 'hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(75,58,36,0.1)]'}`}>
-      {/* Action buttons row — delete + move */}
+      {/* Action buttons — visible on hover */}
       <div className="absolute right-3 top-3 flex items-center gap-1 opacity-0 transition group-hover/card:opacity-100">
-        {/* Move to day */}
         {totalDays > 1 && (
-          <div className="relative">
+          <div className="relative flex items-center gap-1">
             {totalDays <= 5 ? (
-              // Show individual day buttons when ≤ 5 days
               Array.from({ length: totalDays }, (_, di) => di).filter((di) => di !== dayIdx).map((di) => (
                 <button
                   key={di}
@@ -247,7 +239,6 @@ function ActivityCard({
                 </button>
               ))
             ) : (
-              // Dropdown for many days
               <>
                 <button
                   type="button"
@@ -275,7 +266,6 @@ function ActivityCard({
             )}
           </div>
         )}
-        {/* Delete */}
         <button
           type="button"
           onClick={onDelete}
@@ -298,7 +288,6 @@ function ActivityCard({
         {act.isFixedTime && (
           <span className="rounded-full bg-[#fff0c2] px-2.5 py-1 text-[11px] font-semibold text-[#8a641f]">fixed time</span>
         )}
-        {/* Type badge */}
         {editingId === eid('type') ? (
           <select
             autoFocus
@@ -323,7 +312,6 @@ function ActivityCard({
         )}
       </div>
 
-      {/* Title */}
       <div className="mt-3 text-base font-bold text-[#2f2419]">
         <EditableText
           field="title"
@@ -332,7 +320,6 @@ function ActivityCard({
         />
       </div>
 
-      {/* Location */}
       <p className="mt-1 text-xs font-medium text-[#8a7965]">
         Pin:{' '}
         <EditableText
@@ -342,7 +329,6 @@ function ActivityCard({
         />
       </p>
 
-      {/* Description */}
       <div className="mt-3 text-sm leading-6 text-[#5f4c36]">
         <EditableArea
           field="desc"
@@ -365,22 +351,17 @@ function SortableActivityRow(props: SortableActivityRowProps) {
   const { dragId, index, totalActivities } = props
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dragId })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
+  const style = { transform: CSS.Transform.toString(transform), transition }
   const act = props.act
 
   return (
-    <div ref={setNodeRef} style={style} className="grid gap-3 md:grid-cols-[96px_minmax(0,1fr)]">
+    <div ref={setNodeRef} style={style} className="grid gap-3 md:grid-cols-[80px_minmax(0,1fr)]">
       {/* Time + duration column */}
-      <div className="pt-4 text-left md:text-right">
+      <div className="pt-3 text-left md:text-right">
         <div className="text-xs font-bold text-[#3e3021]">
           {props.editingId === `act:${props.dayIdx}:${props.actIdx}:startTime` ? (
             <input
-              autoFocus
-              type="time"
+              autoFocus type="time"
               value={props.editingValue}
               onChange={(e) => props.onEditValueChange(e.target.value)}
               onBlur={() => props.onEditCommit(`act:${props.dayIdx}:${props.actIdx}:startTime`, props.editingValue)}
@@ -404,11 +385,10 @@ function SortableActivityRow(props: SortableActivityRowProps) {
           )}
           {act.endTime && (
             <>
-              {' - '}
+              {' – '}
               {props.editingId === `act:${props.dayIdx}:${props.actIdx}:endTime` ? (
                 <input
-                  autoFocus
-                  type="time"
+                  autoFocus type="time"
                   value={props.editingValue}
                   onChange={(e) => props.onEditValueChange(e.target.value)}
                   onBlur={() => props.onEditCommit(`act:${props.dayIdx}:${props.actIdx}:endTime`, props.editingValue)}
@@ -434,12 +414,10 @@ function SortableActivityRow(props: SortableActivityRowProps) {
           )}
         </div>
         {act.durationMinutes != null && (
-          <div className="mt-1 text-[11px] font-medium text-[#a69682]">
+          <div className="mt-0.5 text-[11px] font-medium text-[#a69682]">
             {props.editingId === `act:${props.dayIdx}:${props.actIdx}:dur` ? (
               <input
-                autoFocus
-                type="number"
-                min={1}
+                autoFocus type="number" min={1}
                 value={props.editingValue}
                 onChange={(e) => props.onEditValueChange(e.target.value)}
                 onBlur={() => props.onEditCommit(`act:${props.dayIdx}:${props.actIdx}:dur`, props.editingValue)}
@@ -447,7 +425,7 @@ function SortableActivityRow(props: SortableActivityRowProps) {
                   if (e.key === 'Escape') { e.preventDefault(); props.onEditCancel() }
                   if (e.key === 'Enter') { e.preventDefault(); props.onEditCommit(`act:${props.dayIdx}:${props.actIdx}:dur`, props.editingValue) }
                 }}
-                className="w-16 rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-[11px] outline-none ring-1 ring-[#5f7d59]/40"
+                className="w-14 rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-[11px] outline-none ring-1 ring-[#5f7d59]/40"
               />
             ) : (
               <span
@@ -465,28 +443,23 @@ function SortableActivityRow(props: SortableActivityRowProps) {
         )}
       </div>
 
-      {/* Card + connector column */}
-      <div className="relative flex gap-3">
-        {/* Drag handle + number column */}
+      {/* Card + drag handle + connector */}
+      <div className="relative flex gap-2">
         <div className="flex flex-col items-center">
-          {/* Drag handle */}
           <button
             type="button"
             {...listeners}
             {...attributes}
-            className="mt-5 cursor-grab touch-none select-none rounded-lg p-1 text-[#c4b09a] transition hover:bg-[#f0e4d4] hover:text-[#75624c] active:cursor-grabbing"
+            className="mt-3 cursor-grab touch-none select-none rounded-lg p-1 text-[#c4b09a] transition hover:bg-[#f0e4d4] hover:text-[#75624c] active:cursor-grabbing"
             title="Drag to reorder"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <circle cx="4" cy="3" r="1.2" />
-              <circle cx="10" cy="3" r="1.2" />
-              <circle cx="4" cy="7" r="1.2" />
-              <circle cx="10" cy="7" r="1.2" />
-              <circle cx="4" cy="11" r="1.2" />
-              <circle cx="10" cy="11" r="1.2" />
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor">
+              <circle cx="4" cy="3" r="1.2" /><circle cx="10" cy="3" r="1.2" />
+              <circle cx="4" cy="7" r="1.2" /><circle cx="10" cy="7" r="1.2" />
+              <circle cx="4" cy="11" r="1.2" /><circle cx="10" cy="11" r="1.2" />
             </svg>
           </button>
-          <span className="mt-1 flex h-8 w-8 items-center justify-center rounded-2xl bg-[#5f7d59] text-xs font-bold text-white shadow-sm">
+          <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-xl bg-[#5f7d59] text-[11px] font-bold text-white shadow-sm">
             {index + 1}
           </span>
           {index < totalActivities - 1 && <span className="w-px flex-1 bg-[#d7c8b3]" />}
@@ -521,43 +494,25 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
   const safeActiveDay = Math.min(activeDay, Math.max(itinerary.days.length - 1, 0))
   const day = itinerary.days[safeActiveDay]
   const dayLocations = useMemo(() => (day ? getDayLocations(day) : []), [day])
-  const activeKeyLocations = itinerary.keyLocations.filter((location) => !day || location.day === day.day)
-  const mapLocations = dayLocations.length > 0
-    ? dayLocations
-    : activeKeyLocations.length > 0
-      ? activeKeyLocations
-      : itinerary.keyLocations
+  const activeKeyLocations = itinerary.keyLocations.filter((l) => !day || l.day === day.day)
+  const mapLocations = dayLocations.length > 0 ? dayLocations : activeKeyLocations.length > 0 ? activeKeyLocations : itinerary.keyLocations
   const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
-  const currentDayWindow = dayWindow(
-    day?.startTime ?? itinerary.trip.dailyStartTime,
-    day?.endTime ?? itinerary.trip.dailyEndTime
-  )
-
-  const dayTravelMinutes = day?.activities.reduce(
-    (total, activity) => total + (activity.travelFromPrevious?.durationMinutes ?? 0),
-    0
-  ) ?? 0
+  const currentDayWindow = dayWindow(day?.startTime ?? itinerary.trip.dailyStartTime, day?.endTime ?? itinerary.trip.dailyEndTime)
+  const dayTravelMinutes = day?.activities.reduce((t, a) => t + (a.travelFromPrevious?.durationMinutes ?? 0), 0) ?? 0
   const days = itinerary.days.length
   const travelers = itinerary.trip.travelers
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  )
-
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const activityIds = day?.activities.map((_, i) => `act:${safeActiveDay}:${i}`) ?? []
 
   const draggingActivity = useMemo(() => {
     if (!draggingId) return null
     const parts = draggingId.split(':')
-    const di = Number(parts[1])
-    const ai = Number(parts[2])
-    return itinerary.days[di]?.activities[ai] ?? null
+    return itinerary.days[Number(parts[1])]?.activities[Number(parts[2])] ?? null
   }, [draggingId, itinerary])
 
-  function startEdit(id: string, value: string) {
-    setEditingId(id)
-    setEditingValue(value)
-  }
+  function startEdit(id: string, value: string) { setEditingId(id); setEditingValue(value) }
+  function cancelEdit() { setEditingId(null) }
 
   function commitEdit(id: string, value: string) {
     if (!onUpdateItinerary) { setEditingId(null); return }
@@ -569,12 +524,10 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
     } else if (parts[0] === 'tip') {
       updated = patchTip(itinerary, Number(parts[1]), value)
     } else if (parts[0] === 'day') {
-      const dayIdx = Number(parts[1])
-      if (parts[2] === 'theme') updated = patchDay(itinerary, dayIdx, { theme: value })
+      if (parts[2] === 'theme') updated = patchDay(itinerary, Number(parts[1]), { theme: value })
     } else if (parts[0] === 'act') {
-      const dayIdx = Number(parts[1])
-      const actIdx = Number(parts[2])
-      const field = parts[3]
+      const [, di, ai, field] = parts
+      const dayIdx = Number(di), actIdx = Number(ai)
       if (field === 'title') updated = patchActivity(itinerary, dayIdx, actIdx, { title: value })
       else if (field === 'desc') updated = patchActivity(itinerary, dayIdx, actIdx, { description: value })
       else if (field === 'loc') updated = patchActivity(itinerary, dayIdx, actIdx, { location: value })
@@ -588,90 +541,15 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
     setEditingId(null)
   }
 
-  function cancelEdit() {
-    setEditingId(null)
-  }
-
-  function handleDragStart(event: DragStartEvent) {
-    setDraggingId(String(event.active.id))
-    setEditingId(null)
-  }
+  function handleDragStart(event: DragStartEvent) { setDraggingId(String(event.active.id)); setEditingId(null) }
 
   function handleDragEnd(event: DragEndEvent) {
     setDraggingId(null)
     const { active, over } = event
     if (!over || active.id === over.id || !onUpdateItinerary) return
-
     const parts = String(active.id).split(':')
     const overParts = String(over.id).split(':')
-    const dayIdx = Number(parts[1])
-    const oldIdx = Number(parts[2])
-    const newIdx = Number(overParts[2])
-
-    onUpdateItinerary(reorderActivities(itinerary, dayIdx, oldIdx, newIdx))
-  }
-
-  // Editable summary in header
-  function SummaryField() {
-    if (editingId === 'summary') {
-      return (
-        <textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-          autoFocus
-          value={editingValue}
-          rows={2}
-          onChange={(e) => setEditingValue(e.target.value)}
-          onBlur={() => commitEdit('summary', editingValue)}
-          onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); cancelEdit() } }}
-          className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-1 text-sm leading-6 text-[#75624c] text-right outline-none ring-1 ring-[#5f7d59]/40 resize-none"
-        />
-      )
-    }
-    return (
-      <span
-        role="button" tabIndex={0}
-        onClick={() => startEdit('summary', itinerary.summary)}
-        onKeyDown={(e) => e.key === 'Enter' && startEdit('summary', itinerary.summary)}
-        className="group/edit inline-flex cursor-text items-start gap-1"
-        title="Click to edit"
-      >
-        <span>{itinerary.summary}</span>
-        <span className="mt-0.5 shrink-0 opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
-      </span>
-    )
-  }
-
-  // Editable day theme
-  function DayThemeField() {
-    const id = `day:${safeActiveDay}:theme`
-    if (editingId === id) {
-      return (
-        <input
-          ref={inputRef as React.RefObject<HTMLInputElement>}
-          autoFocus
-          value={editingValue}
-          onChange={(e) => setEditingValue(e.target.value)}
-          onBlur={() => commitEdit(id, editingValue)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
-            if (e.key === 'Enter') { e.preventDefault(); commitEdit(id, editingValue) }
-          }}
-          className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-2xl font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-        />
-      )
-    }
-    return (
-      <span
-        role="button" tabIndex={0}
-        onClick={() => startEdit(id, day?.theme ?? '')}
-        onKeyDown={(e) => e.key === 'Enter' && startEdit(id, day?.theme ?? '')}
-        className="group/edit inline-flex cursor-text items-baseline gap-1"
-        title="Click to edit"
-      >
-        {day?.theme}
-        <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
-      </span>
-    )
+    onUpdateItinerary(reorderActivities(itinerary, Number(parts[1]), Number(parts[2]), Number(overParts[2])))
   }
 
   const commonCardProps = {
@@ -685,81 +563,138 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
     onEditValueChange: setEditingValue,
   }
 
+  // ── Inline editable fields used in the header / day strip ──────────────────
+
+  function InlineText({ id, value, cls, inputCls }: { id: string; value: string; cls?: string; inputCls?: string }) {
+    if (editingId === id) {
+      return (
+        <input
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          autoFocus value={editingValue}
+          onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={() => commitEdit(id, editingValue)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
+            if (e.key === 'Enter') { e.preventDefault(); commitEdit(id, editingValue) }
+          }}
+          className={inputCls ?? `rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-inherit outline-none ring-1 ring-[#5f7d59]/40 ${cls ?? ''}`}
+        />
+      )
+    }
+    return (
+      <span
+        role="button" tabIndex={0}
+        onClick={() => startEdit(id, value)}
+        onKeyDown={(e) => e.key === 'Enter' && startEdit(id, value)}
+        className={`group/edit inline-flex cursor-text items-baseline gap-1 ${cls ?? ''}`}
+        title="Click to edit"
+      >
+        {value}
+        <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+      </span>
+    )
+  }
+
+  function SummaryArea() {
+    if (editingId === 'summary') {
+      return (
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          autoFocus value={editingValue} rows={3}
+          onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={() => commitEdit('summary', editingValue)}
+          onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); cancelEdit() } }}
+          className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-1 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40 resize-none"
+        />
+      )
+    }
+    return (
+      <span
+        role="button" tabIndex={0}
+        onClick={() => startEdit('summary', itinerary.summary)}
+        onKeyDown={(e) => e.key === 'Enter' && startEdit('summary', itinerary.summary)}
+        className="group/edit inline-flex cursor-text items-start gap-1 text-sm leading-6 text-[#5f4c36]"
+        title="Click to edit summary"
+      >
+        <span>{itinerary.summary}</span>
+        <span className="mt-0.5 shrink-0 opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+      </span>
+    )
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-[#f4efe7] text-[#3e3021]">
-      {/* Header */}
-      <div className="border-b border-[#dfd4c5] bg-[#fbf7ef] px-6 py-4 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset]">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#6f8a68]">Editing workspace</p>
-            <h2 className="mt-1 truncate text-2xl font-bold text-[#2f2419]">{itinerary.trip.destination}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#75624c]">
-              <span>{itinerary.trip.startDate} to {itinerary.trip.endDate}</span>
-              <span className="h-1 w-1 rounded-full bg-[#b7a791]" />
-              <span>{days} {days === 1 ? 'day' : 'days'}</span>
-              <span className="h-1 w-1 rounded-full bg-[#b7a791]" />
-              <span>{travelers} {travelers === 1 ? 'traveler' : 'travelers'}</span>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-[#8a7965]">
-              {itinerary.trip.accommodationLocation && (
-                <span className="rounded-full border border-[#d8c9b5] bg-[#fffaf1] px-3 py-1">
-                  Staying near {itinerary.trip.accommodationLocation}
-                </span>
-              )}
-              <span className="rounded-full border border-[#d8c9b5] bg-[#fffaf1] px-3 py-1">
-                Window {itinerary.trip.dailyStartTime ?? '09:00'} - {itinerary.trip.dailyEndTime ?? '21:00'}
-              </span>
-            </div>
-          </div>
 
-          <div className="flex max-w-xl flex-col items-end gap-3">
-            <p className="max-w-lg text-right text-sm leading-6 text-[#75624c]">
-              <SummaryField />
-            </p>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {savedTripId && onOverview && (
-                <button
-                  type="button"
-                  onClick={onOverview}
-                  className="rounded-full border border-[#d1c0aa] bg-[#fffaf1] px-4 py-2 text-xs font-semibold text-[#5c4630] shadow-sm transition hover:border-[#bca98d] hover:bg-white"
-                >
-                  View overview
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onSave}
-                disabled={isSaving}
-                className="rounded-full bg-[#5f7d59] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4f6b49] disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : savedTripId ? 'Save changes' : 'Save trip'}
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadItineraryMarkdown(itinerary)}
-                className="rounded-full border border-[#d1c0aa] bg-transparent px-4 py-2 text-xs font-semibold text-[#75624c] transition hover:bg-[#fffaf1]"
-              >
-                Export .md
-              </button>
-            </div>
-            {(saveStatus || saveError) && (
-              <p className={`text-xs font-medium ${saveError ? 'text-rose-600' : 'text-[#4f7b4d]'}`}>
-                {saveError ?? saveStatus}
-              </p>
-            )}
+      {/* ── Cut 1: Compact header ── */}
+      <div className="shrink-0 border-b border-[#dfd4c5] bg-[#fbf7ef] px-4 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset]">
+        {/* Row 1: title + actions */}
+        <div className="flex h-12 items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-[#6f8a68] sm:inline">Editing workspace</span>
+            <span className="hidden text-[#d8c9b5] sm:inline">·</span>
+            <h2 className="truncate text-base font-bold text-[#2f2419]">{itinerary.trip.destination}</h2>
           </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {(saveStatus || saveError) && (
+              <span className={`hidden text-[11px] font-medium sm:inline ${saveError ? 'text-rose-600' : 'text-[#4f7b4d]'}`}>
+                {saveError ?? saveStatus}
+              </span>
+            )}
+            {savedTripId && onOverview && (
+              <button
+                type="button" onClick={onOverview}
+                className="rounded-full border border-[#d1c0aa] bg-[#fffaf1] px-3 py-1.5 text-[11px] font-semibold text-[#5c4630] transition hover:border-[#bca98d] hover:bg-white"
+              >
+                Overview
+              </button>
+            )}
+            <button
+              type="button" onClick={onSave} disabled={isSaving}
+              className="rounded-full bg-[#5f7d59] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-50"
+            >
+              {isSaving ? 'Saving…' : savedTripId ? 'Save changes' : 'Save trip'}
+            </button>
+            <button
+              type="button" onClick={() => downloadItineraryMarkdown(itinerary)}
+              className="rounded-full border border-[#d1c0aa] bg-transparent px-3 py-1.5 text-[11px] font-semibold text-[#75624c] transition hover:bg-[#fffaf1]"
+            >
+              Export .md
+            </button>
+          </div>
+        </div>
+        {/* Row 2: inline meta chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 text-[11px] text-[#8a7965]">
+          <span className="shrink-0">{itinerary.trip.startDate} – {itinerary.trip.endDate}</span>
+          <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+          <span className="shrink-0">{days} {days === 1 ? 'day' : 'days'}</span>
+          <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+          <span className="shrink-0">{travelers} {travelers === 1 ? 'traveler' : 'travelers'}</span>
+          {itinerary.trip.accommodationLocation && (
+            <>
+              <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+              <span className="shrink-0">Staying near {itinerary.trip.accommodationLocation}</span>
+            </>
+          )}
+          {(itinerary.trip.dailyStartTime || itinerary.trip.dailyEndTime) && (
+            <>
+              <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+              <span className="shrink-0">
+                {itinerary.trip.dailyStartTime ?? '09:00'}–{itinerary.trip.dailyEndTime ?? '21:00'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <section className="flex min-h-0 w-[58%] flex-col border-r border-[#dfd4c5]">
           {/* Day tabs */}
-          <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-[#dfd4c5] bg-[#fbf7ef]/70 px-5 py-3">
+          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-[#dfd4c5] bg-[#fbf7ef]/70 px-4 py-2">
             {itinerary.days.map((d, i) => (
               <button
                 key={i}
                 onClick={() => setActiveDay(i)}
-                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
                   safeActiveDay === i
                     ? 'border-[#5f7d59] bg-[#5f7d59] text-white'
                     : 'border-[#d8c9b5] bg-[#fffaf1] text-[#75624c] hover:border-[#bca98d] hover:bg-white'
@@ -770,26 +705,24 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             ))}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          {/* Scrollable content: day strip + activities + summary + notes */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
             {day && (
               <>
-                {/* Day header card */}
-                <div className="rounded-[28px] border border-[#dfd4c5] bg-[#fffaf1] p-5 shadow-[0_18px_40px_rgba(75,58,36,0.08)]">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f8a68]">Current day</p>
-                      <h3 className="mt-2 text-2xl font-bold text-[#2f2419]">
-                        <DayThemeField />
-                      </h3>
-                      <p className="mt-1 text-sm font-medium text-[#75624c]">
-                        {day.date}{currentDayWindow ? ` - ${currentDayWindow}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-[#66523b]">
-                      <span className="rounded-full bg-[#f0e4d4] px-3 py-1.5">{day.activities.length} stops</span>
-                      <span className="rounded-full bg-[#e1eadb] px-3 py-1.5">{formatMinutes(dayTravelMinutes)} travel</span>
-                    </div>
-                  </div>
+                {/* ── Cut 2: Slim day strip (replaces the large card) ── */}
+                <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#e8ddd0] pb-3">
+                  <h3 className="text-sm font-bold text-[#2f2419]">
+                    <InlineText
+                      id={`day:${safeActiveDay}:theme`}
+                      value={day.theme}
+                      inputCls="rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                    />
+                  </h3>
+                  <span className="text-[11px] text-[#a69682]">{day.date}{currentDayWindow ? ` · ${currentDayWindow}` : ''}</span>
+                  <span className="ml-auto flex gap-1.5 text-[11px] font-semibold text-[#66523b]">
+                    <span className="rounded-full bg-[#f0e4d4] px-2.5 py-0.5">{day.activities.length} stops</span>
+                    <span className="rounded-full bg-[#e1eadb] px-2.5 py-0.5">{formatMinutes(dayTravelMinutes)} travel</span>
+                  </span>
                 </div>
 
                 {/* Sortable activity list */}
@@ -800,7 +733,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
-                    <div className="mt-5 space-y-3">
+                    <div className="space-y-3">
                       {day.activities.map((act, i) => (
                         <SortableActivityRow
                           key={`act:${safeActiveDay}:${i}`}
@@ -810,9 +743,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                           actIdx={i}
                           totalActivities={day.activities.length}
                           onDelete={() => onUpdateItinerary?.(removeActivity(itinerary, safeActiveDay, i))}
-                          onMoveToDay={(toDayIdx) => {
-                            onUpdateItinerary?.(moveActivityToDay(itinerary, safeActiveDay, i, toDayIdx))
-                          }}
+                          onMoveToDay={(toDayIdx) => onUpdateItinerary?.(moveActivityToDay(itinerary, safeActiveDay, i, toDayIdx))}
                           {...commonCardProps}
                         />
                       ))}
@@ -821,104 +752,114 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
 
                   <DragOverlay>
                     {draggingActivity && (
-                      <div className="rotate-1 rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-4 shadow-2xl opacity-95">
+                      <div className="rotate-1 rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-4 opacity-95 shadow-2xl">
                         <p className="text-base font-bold text-[#2f2419]">{draggingActivity.title}</p>
                         <p className="mt-1 text-xs font-medium text-[#8a7965]">{draggingActivity.location}</p>
                       </div>
                     )}
                   </DragOverlay>
                 </DndContext>
-              </>
-            )}
-          </div>
 
-          {/* Planning notes */}
-          <div className="shrink-0 border-t border-[#dfd4c5] bg-[#fbf7ef] px-5 py-3">
-            <div className="mb-2 flex items-center gap-3">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f8a68]">Planning notes</p>
-              {onUpdateItinerary && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = appendTip(itinerary)
-                    onUpdateItinerary(updated)
-                    startEdit(`tip:${updated.tips.length - 1}`, '')
-                  }}
-                  className="text-[11px] font-semibold text-[#6f8a68] transition hover:text-[#5f7d59]"
-                >
-                  + Add note
-                </button>
-              )}
-            </div>
-            {itinerary.tips.length > 0 && (
-              <ul className="grid gap-1.5 sm:grid-cols-2">
-                {itinerary.tips.slice(0, 6).map((tip, i) => (
-                  <li key={i} className="group/tip flex items-start gap-2 text-xs leading-5 text-[#75624c]">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8ba27e]" />
-                    {editingId === `tip:${i}` ? (
-                      <input
-                        ref={inputRef as React.RefObject<HTMLInputElement>}
-                        autoFocus
-                        value={editingValue}
-                        onChange={(e) => setEditingValue(e.target.value)}
-                        onBlur={() => commitEdit(`tip:${i}`, editingValue)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
-                          if (e.key === 'Enter') { e.preventDefault(); commitEdit(`tip:${i}`, editingValue) }
-                        }}
-                        className="flex-1 rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-xs text-[#75624c] outline-none ring-1 ring-[#5f7d59]/40"
-                      />
-                    ) : (
-                      <span
-                        role="button" tabIndex={0}
-                        onClick={() => startEdit(`tip:${i}`, tip)}
-                        onKeyDown={(e) => e.key === 'Enter' && startEdit(`tip:${i}`, tip)}
-                        className="group/edit flex-1 cursor-text"
-                        title="Click to edit"
-                      >
-                        {tip || <span className="italic text-[#b7a791]">empty note</span>}
-                        <span className="ml-1 opacity-0 text-[9px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
-                      </span>
+                {/* ── Cut 3: Summary + planning notes scroll with activities ── */}
+                <details className="mt-5 rounded-2xl border border-[#dfd4c5] bg-[#fffaf1]">
+                  <summary className="flex cursor-pointer select-none list-none items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[#6f8a68] hover:bg-[#f7f2ea]">
+                    <span>Trip summary &amp; notes</span>
+                    <span className="text-[10px] text-[#b7a791]">click to expand</span>
+                  </summary>
+                  <div className="border-t border-[#e8ddd0] px-4 py-3">
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Summary</p>
+                    <SummaryArea />
+
+                    {(itinerary.tips.length > 0 || onUpdateItinerary) && (
+                      <div className="mt-4">
+                        <div className="mb-2 flex items-center gap-3">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Planning notes</p>
+                          {onUpdateItinerary && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = appendTip(itinerary)
+                                onUpdateItinerary(updated)
+                                startEdit(`tip:${updated.tips.length - 1}`, '')
+                              }}
+                              className="text-[11px] font-semibold text-[#6f8a68] transition hover:text-[#5f7d59]"
+                            >
+                              + Add note
+                            </button>
+                          )}
+                        </div>
+                        <ul className="space-y-1.5">
+                          {itinerary.tips.map((tip, i) => (
+                            <li key={i} className="group/tip flex items-start gap-2 text-xs leading-5 text-[#75624c]">
+                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8ba27e]" />
+                              {editingId === `tip:${i}` ? (
+                                <input
+                                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                                  autoFocus value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onBlur={() => commitEdit(`tip:${i}`, editingValue)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
+                                    if (e.key === 'Enter') { e.preventDefault(); commitEdit(`tip:${i}`, editingValue) }
+                                  }}
+                                  className="flex-1 rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-xs text-[#75624c] outline-none ring-1 ring-[#5f7d59]/40"
+                                />
+                              ) : (
+                                <span
+                                  role="button" tabIndex={0}
+                                  onClick={() => startEdit(`tip:${i}`, tip)}
+                                  onKeyDown={(e) => e.key === 'Enter' && startEdit(`tip:${i}`, tip)}
+                                  className="group/edit flex-1 cursor-text"
+                                  title="Click to edit"
+                                >
+                                  {tip || <span className="italic text-[#b7a791]">empty note</span>}
+                                  <span className="ml-1 opacity-0 text-[9px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                                </span>
+                              )}
+                              {onUpdateItinerary && (
+                                <button
+                                  type="button"
+                                  onClick={() => onUpdateItinerary(removeTip(itinerary, i))}
+                                  className="mt-0.5 shrink-0 text-[#c4b09a] opacity-0 transition hover:text-rose-500 group-hover/tip:opacity-100"
+                                  title="Remove note"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
-                    {onUpdateItinerary && (
-                      <button
-                        type="button"
-                        onClick={() => onUpdateItinerary(removeTip(itinerary, i))}
-                        className="mt-0.5 flex-shrink-0 text-[#c4b09a] opacity-0 transition hover:text-rose-500 group-hover/tip:opacity-100"
-                        title="Remove note"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </details>
+                <div className="h-4" />
+              </>
             )}
           </div>
         </section>
 
         {/* Map sidebar */}
-        <aside className="flex min-w-[360px] flex-1 flex-col gap-4 p-5">
-          <div className="flex min-h-0 flex-1 flex-col rounded-[28px] border border-[#dfd4c5] bg-[#fffaf1] p-4 shadow-[0_18px_40px_rgba(75,58,36,0.08)]">
-            <div className="mb-3 flex items-start justify-between gap-4">
+        <aside className="flex min-w-[320px] flex-1 flex-col gap-3 p-4">
+          <div className="flex min-h-0 flex-1 flex-col rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-3 shadow-[0_18px_40px_rgba(75,58,36,0.08)]">
+            <div className="mb-2 flex items-center justify-between gap-2">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f8a68]">Working map</p>
-                <h3 className="mt-1 text-lg font-bold text-[#2f2419]">Day {day?.day ?? 1} route</h3>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Working map</p>
+                <h3 className="mt-0.5 text-sm font-bold text-[#2f2419]">Day {day?.day ?? 1} route</h3>
               </div>
-              <div className="rounded-2xl bg-[#f0e4d4] px-3 py-2 text-right text-xs font-semibold text-[#66523b]">
-                <p>{mapLocations.length} pins</p>
-                <p className="mt-0.5 text-[#8a7965]">{formatMinutes(dayTravelMinutes)} travel</p>
+              <div className="rounded-xl bg-[#f0e4d4] px-2.5 py-1.5 text-right text-[11px] font-semibold text-[#66523b]">
+                <p>{mapLocations.length} pins · {formatMinutes(dayTravelMinutes)}</p>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[#d1c0aa] bg-[#e9e1d4]">
+            <div className="min-h-0 flex-1 overflow-hidden rounded-[18px] border border-[#d1c0aa] bg-[#e9e1d4]">
               <MapView center={mapCenter} locations={mapLocations} activeDay={day?.day} />
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-[#dfd4c5] bg-[#fbf7ef] p-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f8a68]">Studio focus</p>
-            <p className="mt-2 text-sm leading-6 text-[#66523b]">
-              Drag the <span className="font-semibold">⠿</span> handle to reorder stops. Use <span className="font-semibold">→D</span> buttons to move a stop to another day. Click any text to edit it directly.
+          <div className="shrink-0 rounded-[20px] border border-[#dfd4c5] bg-[#fbf7ef] px-4 py-3 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Studio focus</p>
+            <p className="mt-1.5 text-xs leading-5 text-[#66523b]">
+              Drag <span className="font-semibold">⠿</span> to reorder · <span className="font-semibold">→D</span> to move between days · click any text to edit
             </p>
           </div>
         </aside>
