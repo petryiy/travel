@@ -21,6 +21,7 @@ interface Props {
   presentationMode: 'overview' | 'edit'
   onSetup: (details: TripDetails) => void
   onSend: (text: string) => void
+  onUpdateItinerary: (itinerary: Itinerary) => void
   onSave: () => void
   onOpenSavedTrip: (tripId: string) => void
   onRenameSavedTrip: (title: string) => Promise<boolean>
@@ -44,6 +45,7 @@ export function CanvasPanel({
   presentationMode,
   onSetup,
   onSend,
+  onUpdateItinerary,
   onSave,
   onOpenSavedTrip,
   onRenameSavedTrip,
@@ -123,6 +125,7 @@ export function CanvasPanel({
         saveStatus={saveStatus}
         saveError={saveError}
         onSave={onSave}
+        onUpdateItinerary={onUpdateItinerary}
         onOverview={() => onPresentationModeChange('overview')}
       />
     )

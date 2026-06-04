@@ -35,6 +35,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     submitSetup,
     startNewTrip,
     sendMessage,
+    updateItinerary,
     saveCurrentTrip,
     openSavedTrip,
     renameSavedTripTitle,
@@ -115,6 +116,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               presentationMode={presentationMode}
               onSetup={submitSetup}
               onSend={sendMessage}
+              onUpdateItinerary={updateItinerary}
               onSave={handleSave}
               onOpenSavedTrip={handleOpenTrip}
               onRenameSavedTrip={renameSavedTripTitle}

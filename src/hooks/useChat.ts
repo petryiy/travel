@@ -205,6 +205,10 @@ export function useChat(userId: string | null) {
     }
   }, [])
 
+  const updateItinerary = useCallback((newItinerary: Itinerary) => {
+    setItinerary(newItinerary)
+  }, [])
+
   const retry = useCallback(async () => {
     if (messages.length === 0) return
     await callGemini(messages, tripDetails ?? undefined, itinerary)
@@ -259,6 +263,7 @@ export function useChat(userId: string | null) {
     submitSetup,
     startNewTrip,
     sendMessage,
+    updateItinerary,
     saveCurrentTrip,
     openSavedTrip,
     renameSavedTripTitle,
