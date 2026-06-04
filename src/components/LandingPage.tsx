@@ -246,13 +246,13 @@ function LandingContent({
       </div>
 
       <h1
-        className="text-5xl sm:text-6xl lg:text-7xl tracking-tight text-center travel-gradient-text"
+        className="text-5xl sm:text-6xl lg:text-7xl tracking-tight text-center whitespace-nowrap travel-gradient-text"
         style={{
           opacity: 0,
           animation: "fade-blur-in 0.8s cubic-bezier(0.32,0.72,0,1) 0.1s forwards, travel-gradient-shift 6s ease infinite",
         }}
       >
-        Travel Planner
+        Meet U
       </h1>
 
       <p className="animate-fade-blur text-[13px] font-light tracking-[0.15em] uppercase text-[#96AB8E] text-center -mt-2" style={{ animationDelay: "0.2s" }}>
