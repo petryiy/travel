@@ -35,8 +35,8 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
   }
 
   return (
-    <div className="border-t border-zinc-200 px-4 py-3">
-      <div className="flex items-end gap-2 bg-zinc-100 rounded-2xl px-3 py-2">
+    <div className="border-t border-[#dfd4c5] bg-[#f6efe3] px-4 py-3">
+      <div className="flex items-end gap-2 rounded-[24px] border border-[#d8c9b5] bg-[#fffaf1] px-3 py-2 shadow-sm transition focus-within:border-[#8ba27e] focus-within:ring-4 focus-within:ring-[#8ba27e]/15">
         <textarea
           ref={textareaRef}
           value={value}
@@ -46,12 +46,12 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
           disabled={disabled}
           placeholder={hasItinerary ? 'Try: “I booked a 14:00 museum slot on day 2, rearrange that day”…' : 'Type a message…'}
           rows={1}
-          className="flex-1 bg-transparent text-sm text-zinc-800 placeholder:text-zinc-400 resize-none outline-none max-h-40 leading-relaxed disabled:opacity-50"
+          className="max-h-40 flex-1 resize-none bg-transparent text-sm leading-relaxed text-[#3e3021] outline-none placeholder:text-[#a69682] disabled:opacity-50"
         />
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
-          className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 mb-0.5 disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+          className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#5f7d59] text-white shadow-sm transition hover:bg-[#4f6b49] disabled:opacity-40"
           aria-label="Send"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
@@ -59,7 +59,7 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
           </svg>
         </button>
       </div>
-      <p className="text-center text-[11px] text-zinc-400 mt-1.5">
+      <p className="mt-1.5 text-center text-[11px] text-[#a69682]">
         Shift+Enter for new line · Enter to send
       </p>
     </div>

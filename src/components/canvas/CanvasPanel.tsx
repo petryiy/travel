@@ -81,7 +81,7 @@ export function CanvasPanel({
           <div className="text-5xl">😔</div>
           <div>
             <p className="text-zinc-800 font-semibold">Something went wrong</p>
-            <p className="text-zinc-500 text-sm mt-1">Couldn't reach the AI. Check your connection and try again.</p>
+            <p className="text-zinc-500 text-sm mt-1">Could not reach the AI. Check your connection and try again.</p>
           </div>
           <button
             onClick={onRetry}
