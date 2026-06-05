@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate-gallery": "node --env-file=.env.local scripts/migrate-gallery.mjs"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.2",

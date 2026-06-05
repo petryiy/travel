@@ -10,6 +10,7 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/guest') ||
+    pathname.startsWith('/gallery') ||
     pathname.startsWith('/share') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/chat')

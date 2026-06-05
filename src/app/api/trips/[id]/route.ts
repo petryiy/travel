@@ -15,6 +15,8 @@ interface TripRow {
   summary: string
   itinerary: Itinerary
   messages: Message[] | null
+  is_published?: boolean | null
+  published_at?: Date | null
   created_at: Date
   updated_at: Date
 }
@@ -22,6 +24,7 @@ interface TripRow {
 interface RenameTripBody {
   ownerId?: string
   title?: unknown
+  isPublished?: unknown
 }
 
 function serializeRow(row: TripRow) {
@@ -36,6 +39,8 @@ function serializeRow(row: TripRow) {
     summary: row.summary,
     itinerary: row.itinerary,
     messages: row.messages ?? [],
+    isPublished: Boolean(row.is_published),
+    publishedAt: row.published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }
@@ -51,6 +56,8 @@ function serializeRowSummary(row: Omit<TripRow, 'itinerary' | 'messages'>) {
     travelers: row.travelers,
     style: row.style as TripStyle,
     summary: row.summary,
+    isPublished: Boolean(row.is_published),
+    publishedAt: row.published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }
@@ -92,8 +99,52 @@ export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { id } = await context.params
-  const { ownerId, title }: RenameTripBody = await req.json()
+  const { ownerId, title, isPublished }: RenameTripBody = await req.json()
+  const sessionOwnerId = session.user.id
+
+  if (ownerId && ownerId !== sessionOwnerId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (typeof title === 'undefined' && typeof isPublished === 'undefined') {
+    return NextResponse.json({ error: 'No trip updates provided.' }, { status: 400 })
+  }
+
+  if (typeof isPublished !== 'undefined' && typeof isPublished !== 'boolean') {
+    return NextResponse.json({ error: 'isPublished must be a boolean.' }, { status: 400 })
+  }
+
+  if (typeof title === 'undefined') {
+    const client = await getClient()
+    try {
+      const now = new Date()
+      const { rows } = await client.query<Omit<TripRow, 'itinerary' | 'messages'>>(
+        `UPDATE trips
+         SET is_published = $1, published_at = CASE WHEN $1 THEN COALESCE(published_at, $2) ELSE NULL END, updated_at = $2
+         WHERE id = $3 AND owner_id = $4
+         RETURNING id, owner_id, title, destination, start_date, end_date, travelers, style, summary,
+                   is_published, published_at, created_at, updated_at`,
+        [isPublished, now, id, sessionOwnerId]
+      )
+
+      if (rows.length === 0) {
+        return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
+      }
+
+      return NextResponse.json({ trip: serializeRowSummary(rows[0]) })
+    } catch (err) {
+      console.error('Publish trip error:', err)
+      return NextResponse.json({ error: 'Unable to update gallery publishing.' }, { status: 500 })
+    } finally {
+      await client.end()
+    }
+  }
 
   if (!ownerId) {
     return NextResponse.json({ error: 'ownerId is required.' }, { status: 400 })
@@ -118,8 +169,9 @@ export async function PATCH(
       `UPDATE trips
        SET title = $1, updated_at = $2
        WHERE id = $3 AND owner_id = $4
-       RETURNING id, owner_id, title, destination, start_date, end_date, travelers, style, summary, created_at, updated_at`,
-      [cleanTitle, new Date(), id, ownerId]
+       RETURNING id, owner_id, title, destination, start_date, end_date, travelers, style, summary,
+                 is_published, published_at, created_at, updated_at`,
+      [cleanTitle, new Date(), id, sessionOwnerId]
     )
 
     if (rows.length === 0) {

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import type { SavedTripSummary } from '@/types/travel'
 
 interface Props {
@@ -68,13 +69,12 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
             >
               Footprints
             </button>
-            <button
-              type="button"
-              className="rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-sm font-semibold text-[#7d6c58] opacity-60"
-              disabled
+            <Link
+              href="/gallery"
+              className="rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-sm font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59]"
             >
-              Trip Gallary
-            </button>
+              Gallery
+            </Link>
             <button
               type="button"
               onClick={onNewTrip}
@@ -136,9 +136,16 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
                           </p>
                         )}
                       </div>
-                      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold capitalize ${STYLE_STAMPS[trip.style]}`}>
-                        {trip.style}
-                      </span>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${STYLE_STAMPS[trip.style]}`}>
+                          {trip.style}
+                        </span>
+                        {trip.isPublished && (
+                          <span className="rounded-full bg-[#efe7d8] px-3 py-1 text-xs font-bold text-[#7d6c58]">
+                            Published
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <p className="mt-5 line-clamp-4 text-sm leading-6 text-[#66523b]">{trip.summary}</p>

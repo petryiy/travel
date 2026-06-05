@@ -22,6 +22,8 @@ interface TripRow {
   summary: string
   itinerary: Itinerary
   messages: Message[] | null
+  is_published?: boolean | null
+  published_at?: Date | null
   created_at: Date
   updated_at: Date
 }
@@ -50,6 +52,8 @@ function serializeRow(row: TripRow) {
     summary: row.summary,
     itinerary: row.itinerary,
     messages: row.messages ?? [],
+    isPublished: Boolean(row.is_published),
+    publishedAt: row.published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }
@@ -65,12 +69,14 @@ function serializeRowSummary(row: Omit<TripRow, 'itinerary' | 'messages'>) {
     travelers: row.travelers,
     style: row.style as TripStyle,
     summary: row.summary,
+    isPublished: Boolean(row.is_published),
+    publishedAt: row.published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   }
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -80,7 +86,8 @@ export async function GET(_req: NextRequest) {
   const client = await getClient()
   try {
     const { rows } = await client.query<Omit<TripRow, 'itinerary' | 'messages'>>(
-      `SELECT id, owner_id, title, destination, start_date, end_date, travelers, style, summary, created_at, updated_at
+      `SELECT id, owner_id, title, destination, start_date, end_date, travelers, style, summary,
+              is_published, published_at, created_at, updated_at
        FROM trips
        WHERE owner_id = $1
        ORDER BY updated_at DESC

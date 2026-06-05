@@ -13,6 +13,8 @@ interface Props {
   isLoading: boolean
   savedTripId: string | null
   savedTripTitle: string | null
+  authorName: string | null
+  savedTripIsPublished: boolean
   savedTrips: SavedTripSummary[]
   isSaving: boolean
   isLoadingTrips: boolean
@@ -25,6 +27,7 @@ interface Props {
   onSave: () => void
   onOpenSavedTrip: (tripId: string) => void
   onRenameSavedTrip: (title: string) => Promise<boolean>
+  onPublishSavedTrip: (isPublished: boolean) => Promise<boolean>
   onPresentationModeChange: (mode: 'overview' | 'edit') => void
   onBackToDashboard: () => void
   onRetry: () => void
@@ -37,6 +40,8 @@ export function CanvasPanel({
   isLoading,
   savedTripId,
   savedTripTitle,
+  authorName,
+  savedTripIsPublished,
   savedTrips,
   isSaving,
   isLoadingTrips,
@@ -49,6 +54,7 @@ export function CanvasPanel({
   onSave,
   onOpenSavedTrip,
   onRenameSavedTrip,
+  onPublishSavedTrip,
   onPresentationModeChange,
   onBackToDashboard,
   onRetry,
@@ -111,9 +117,12 @@ export function CanvasPanel({
           itinerary={itinerary}
           savedTripTitle={savedTripTitle}
           savedTripId={savedTripId}
+          authorName={authorName}
+          isPublished={savedTripIsPublished}
           onBackToDashboard={onBackToDashboard}
           onEdit={() => onPresentationModeChange('edit')}
           onRenameTitle={onRenameSavedTrip}
+          onPublishChange={onPublishSavedTrip}
         />
       )
     }
