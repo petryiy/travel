@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import type { Activity, DayPlan, Itinerary } from '@/types/travel'
-import { downloadItineraryMarkdown } from '@/lib/itineraryExport'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { createItineraryPosterDataUrl } from '@/lib/posterExport'
 import { MapView } from './MapView'
@@ -27,9 +26,11 @@ const TIME_LABELS: Record<Activity['time'], string> = {
 interface Props {
   itinerary: Itinerary
   savedTripTitle: string | null
-  onBackToDashboard: () => void
-  onEdit: () => void
-  onRenameTitle: (title: string) => Promise<boolean>
+  savedTripId?: string | null
+  isPublicView?: boolean
+  onBackToDashboard?: () => void
+  onEdit?: () => void
+  onRenameTitle?: (title: string) => Promise<boolean>
 }
 
 function formatDate(value: string) {
@@ -81,7 +82,15 @@ function fallbackPosterCaption(itinerary: Itinerary) {
   return `A softer way to meet ${itinerary.trip.destination}, one gentle moment at a time.`
 }
 
-export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard, onEdit, onRenameTitle }: Props) {
+export function ItineraryOverview({
+  itinerary,
+  savedTripTitle,
+  savedTripId,
+  isPublicView = false,
+  onBackToDashboard,
+  onEdit,
+  onRenameTitle,
+}: Props) {
   const title = savedTripTitle ?? itinerary.trip.destination
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
@@ -90,6 +99,9 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
   const [isPosterOpen, setIsPosterOpen] = useState(false)
   const [posterDataUrl, setPosterDataUrl] = useState<string | null>(null)
   const [posterError, setPosterError] = useState<string | null>(null)
+  const [isShareOpen, setIsShareOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [shareStatus, setShareStatus] = useState<string | null>(null)
   const mapLocations = useMemo(() => getTripLocations(itinerary), [itinerary])
   const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
   const activityCount = itinerary.days.reduce((total, day) => total + day.activities.length, 0)
@@ -103,6 +115,8 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
   const finalDay = itinerary.days[itinerary.days.length - 1]
 
   async function handleSaveTitle() {
+    if (!onRenameTitle) return
+
     const cleanTitle = draftTitle.trim()
     if (!cleanTitle) {
       setTitleError('Please enter a title.')
@@ -153,30 +167,66 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
     }
   }
 
+  function handleOpenShare() {
+    if (!savedTripId) {
+      setShareUrl(null)
+      setShareStatus('Save this trip before sharing.')
+      setIsShareOpen(true)
+      return
+    }
+
+    const url = `${window.location.origin}/share/${savedTripId}`
+    setShareUrl(url)
+    setShareStatus(null)
+    setIsShareOpen(true)
+  }
+
+  async function handleCopyShareLink() {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setShareStatus('Link copied.')
+    } catch {
+      setShareStatus('Could not copy automatically. You can copy it manually.')
+    }
+  }
+
   return (
     <main className="journal-desk flex-1 overflow-y-auto text-[#3e3021]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onBackToDashboard}
-            className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-4 py-2 text-sm font-semibold text-[#5c4630] shadow-sm transition hover:bg-white"
-          >
-            Dashboard
-          </button>
-
-          <div className="journal-sketch flex rounded-lg bg-[#fffaf0]/88 p-1 shadow-sm">
-            <span className="rounded-md bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7]">
-              Overview
-            </span>
+          {onBackToDashboard ? (
             <button
               type="button"
-              onClick={onEdit}
-              className="rounded-md px-4 py-2 text-sm font-semibold text-[#806a52] transition hover:bg-[#f6ead3] hover:text-[#3e3021]"
+              onClick={onBackToDashboard}
+              className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-4 py-2 text-sm font-semibold text-[#5c4630] shadow-sm transition hover:bg-white"
             >
-              Edit with agent
+              Dashboard
             </button>
-          </div>
+          ) : (
+            <span className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-4 py-2 text-sm font-semibold text-[#5c4630] shadow-sm">
+              MeetU shared plan
+            </span>
+          )}
+
+          {!isPublicView && onEdit ? (
+            <div className="journal-sketch flex rounded-lg bg-[#fffaf0]/88 p-1 shadow-sm">
+              <span className="rounded-md bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7]">
+                Overview
+              </span>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="rounded-md px-4 py-2 text-sm font-semibold text-[#806a52] transition hover:bg-[#f6ead3] hover:text-[#3e3021]"
+              >
+                Edit with agent
+              </button>
+            </div>
+          ) : (
+            <span className="journal-sketch rounded-lg bg-[#d8e7d2] px-4 py-2 text-sm font-semibold text-[#426145] shadow-sm">
+              Shared overview
+            </span>
+          )}
         </div>
 
         <section className="journal-paper journal-sketch rotate-[-0.12deg] rounded-lg px-5 py-7 sm:px-8 lg:px-10">
@@ -233,17 +283,19 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
                   <h1 className="max-w-3xl font-serif text-4xl font-bold leading-tight text-[#34271b] lg:text-6xl">
                     {title}
                   </h1>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDraftTitle(title)
-                      setTitleError(null)
-                      setIsEditingTitle(true)
-                    }}
-                    className="journal-sketch mb-1 rotate-[1deg] rounded-lg bg-[#fff7d7] px-3 py-1.5 text-sm font-semibold text-[#6c4f2b] shadow-sm transition hover:bg-[#ffefba]"
-                  >
-                    Rename
-                  </button>
+                  {!isPublicView && onRenameTitle && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftTitle(title)
+                        setTitleError(null)
+                        setIsEditingTitle(true)
+                      }}
+                      className="journal-sketch mb-1 rotate-[1deg] rounded-lg bg-[#fff7d7] px-3 py-1.5 text-sm font-semibold text-[#6c4f2b] shadow-sm transition hover:bg-[#ffefba]"
+                    >
+                      Rename
+                    </button>
+                  )}
                 </div>
               )}
               {title !== itinerary.trip.destination && (
@@ -294,20 +346,24 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
                   <dd className="text-right text-sm font-bold text-[#34271b]">{finalDay ? formatDate(finalDay.date) : '-'}</dd>
                 </div>
               </dl>
-              <button
-                type="button"
-                onClick={() => void handleOpenPoster()}
-                className="journal-sketch mt-4 w-full rounded-lg bg-[#3f3428] px-4 py-3 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938]"
-              >
-                Export poster
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadItineraryMarkdown(itinerary)}
-                className="journal-sketch mt-3 w-full rounded-lg bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#5e4932] transition hover:bg-white"
-              >
-                Export .md
-              </button>
+              {!isPublicView && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenPoster()}
+                    className="journal-sketch mt-4 w-full rounded-lg bg-[#3f3428] px-4 py-3 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938]"
+                  >
+                    Export poster
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenShare}
+                    className="journal-sketch mt-3 w-full rounded-lg bg-[#d8e7d2] px-4 py-3 text-sm font-semibold text-[#426145] transition hover:bg-[#cbe1c2]"
+                  >
+                    Share
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -408,6 +464,59 @@ export function ItineraryOverview({ itinerary, savedTripTitle, onBackToDashboard
         open={isPosterOpen}
         onClose={() => setIsPosterOpen(false)}
       />
+      {isShareOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2118]/45 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[#c7b58e] bg-[#fffaf0] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b8a64]">Share plan</p>
+                <h2 className="mt-1 font-serif text-2xl font-bold text-[#34271b]">{title}</h2>
+                <p className="mt-2 text-sm leading-6 text-[#6d5740]">
+                  Anyone with this link can view the overview page.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareOpen(false)}
+                className="rounded-full border border-[#d2c1a3] bg-white px-3 py-1.5 text-sm font-bold text-[#6d5740] transition hover:bg-[#f7ead1]"
+                aria-label="Close share dialog"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-[#d8c8a8] bg-white p-3">
+              {shareUrl ? (
+                <p className="break-all text-sm leading-6 text-[#5f4c36]">{shareUrl}</p>
+              ) : (
+                <p className="text-sm font-semibold text-[#8a5a3b]">{shareStatus}</p>
+              )}
+            </div>
+
+            {shareStatus && shareUrl && (
+              <p className="mt-3 text-sm font-semibold text-[#5f7d59]">{shareStatus}</p>
+            )}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsShareOpen(false)}
+                className="rounded-full border border-[#c7b58e] bg-white px-4 py-2 text-sm font-semibold text-[#6d5740] transition hover:bg-[#f7ead1]"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleCopyShareLink()}
+                disabled={!shareUrl}
+                className="rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50"
+              >
+                Copy link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

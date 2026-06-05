@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import type { Itinerary, Activity } from '@/types/travel'
-import { downloadItineraryMarkdown } from '@/lib/itineraryExport'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { MapView } from './MapView'
 
@@ -120,13 +119,6 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                 className="rounded-full bg-[#5f7d59] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4f6b49] disabled:opacity-50"
               >
                 {isSaving ? 'Saving...' : savedTripId ? 'Save changes' : 'Save trip'}
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadItineraryMarkdown(itinerary)}
-                className="rounded-full border border-[#d1c0aa] bg-transparent px-4 py-2 text-xs font-semibold text-[#75624c] transition hover:bg-[#fffaf1]"
-              >
-                Export .md
               </button>
             </div>
             {(saveStatus || saveError) && (
