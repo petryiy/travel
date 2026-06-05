@@ -108,6 +108,7 @@ export function CanvasPanel({
         <ItineraryOverview
           itinerary={itinerary}
           savedTripTitle={savedTripTitle}
+          savedTripId={savedTripId}
           onBackToDashboard={onBackToDashboard}
           onEdit={() => onPresentationModeChange('edit')}
           onRenameTitle={onRenameSavedTrip}
