@@ -27,10 +27,13 @@ interface Props {
   itinerary: Itinerary
   savedTripTitle: string | null
   savedTripId?: string | null
+  authorName?: string | null
+  isPublished?: boolean
   isPublicView?: boolean
   onBackToDashboard?: () => void
   onEdit?: () => void
   onRenameTitle?: (title: string) => Promise<boolean>
+  onPublishChange?: (isPublished: boolean) => Promise<boolean>
 }
 
 function formatDate(value: string) {
@@ -82,14 +85,22 @@ function fallbackPosterCaption(itinerary: Itinerary) {
   return `A softer way to meet ${itinerary.trip.destination}, one gentle moment at a time.`
 }
 
+function displayAuthorName(value?: string | null) {
+  const name = value?.trim()
+  return name || 'MeetU traveler'
+}
+
 export function ItineraryOverview({
   itinerary,
   savedTripTitle,
   savedTripId,
+  authorName,
+  isPublished = false,
   isPublicView = false,
   onBackToDashboard,
   onEdit,
   onRenameTitle,
+  onPublishChange,
 }: Props) {
   const title = savedTripTitle ?? itinerary.trip.destination
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -102,6 +113,10 @@ export function ItineraryOverview({
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [shareStatus, setShareStatus] = useState<string | null>(null)
+  const [isPublishOpen, setIsPublishOpen] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [publishStatus, setPublishStatus] = useState<string | null>(null)
+  const shownAuthorName = displayAuthorName(authorName)
   const mapLocations = useMemo(() => getTripLocations(itinerary), [itinerary])
   const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
   const activityCount = itinerary.days.reduce((total, day) => total + day.activities.length, 0)
@@ -191,6 +206,33 @@ export function ItineraryOverview({
     }
   }
 
+  function handleOpenPublish() {
+    if (!savedTripId) {
+      setPublishStatus('Save this trip before publishing.')
+      setIsPublishOpen(true)
+      return
+    }
+
+    setPublishStatus(null)
+    setIsPublishOpen(true)
+  }
+
+  async function handleConfirmPublishChange() {
+    if (!onPublishChange || !savedTripId) return
+
+    setIsPublishing(true)
+    setPublishStatus(null)
+    const updated = await onPublishChange(!isPublished)
+    setIsPublishing(false)
+
+    if (updated) {
+      setPublishStatus(!isPublished ? 'Published to Gallery.' : 'Removed from Gallery.')
+      setIsPublishOpen(false)
+    } else {
+      setPublishStatus('Could not update Gallery publishing.')
+    }
+  }
+
   return (
     <main className="journal-desk flex-1 overflow-y-auto text-[#3e3021]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
@@ -238,6 +280,11 @@ export function ItineraryOverview({
               <p className="inline-flex rotate-[-1deg] rounded-md bg-[#d8e7d2] px-3 py-1.5 text-xs font-bold uppercase text-[#426145]">
                 Saved itinerary
               </p>
+              {(isPublicView || isPublished) && (
+                <p className="mt-3 inline-flex max-w-full flex-wrap rounded-full border border-[#d8c8a8] bg-[#fffdf5]/80 px-3 py-1.5 text-sm font-semibold text-[#6f8a68]">
+                  Created by {shownAuthorName}
+                </p>
+              )}
               {isEditingTitle ? (
                 <div className="mt-4 max-w-3xl">
                   <input
@@ -361,6 +408,13 @@ export function ItineraryOverview({
                     className="journal-sketch mt-3 w-full rounded-lg bg-[#d8e7d2] px-4 py-3 text-sm font-semibold text-[#426145] transition hover:bg-[#cbe1c2]"
                   >
                     Share
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenPublish}
+                    className="journal-sketch mt-3 w-full rounded-lg bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#5e4932] transition hover:bg-white"
+                  >
+                    {isPublished ? 'Unpublish from Gallery' : 'Publish to Gallery'}
                   </button>
                 </>
               )}
@@ -512,6 +566,61 @@ export function ItineraryOverview({
                 className="rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50"
               >
                 Copy link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isPublishOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2118]/45 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[#c7b58e] bg-[#fffaf0] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b8a64]">Gallery</p>
+                <h2 className="mt-1 font-serif text-2xl font-bold text-[#34271b]">
+                  {isPublished ? 'Unpublish this plan?' : 'Publish this plan?'}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#6d5740]">
+                  {isPublished
+                    ? 'This trip will be removed from the public Gallery. Existing private share links will still work.'
+                    : `This trip will appear in the public Gallery as created by ${shownAuthorName}, and anyone can open its overview page.`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPublishOpen(false)}
+                className="rounded-full border border-[#d2c1a3] bg-white px-3 py-1.5 text-sm font-bold text-[#6d5740] transition hover:bg-[#f7ead1]"
+                aria-label="Close publish dialog"
+              >
+                ×
+              </button>
+            </div>
+
+            {!isPublished && (
+              <div className="mt-5 rounded-xl border border-[#d8c8a8] bg-white p-3 text-sm leading-6 text-[#6d5740]">
+                Make sure you are comfortable showing details such as accommodation area, fixed bookings, and daily plans.
+              </div>
+            )}
+
+            {publishStatus && (
+              <p className="mt-3 text-sm font-semibold text-[#8a5a3b]">{publishStatus}</p>
+            )}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPublishOpen(false)}
+                className="rounded-full border border-[#c7b58e] bg-white px-4 py-2 text-sm font-semibold text-[#6d5740] transition hover:bg-[#f7ead1]"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmPublishChange()}
+                disabled={isPublishing || !savedTripId}
+                className="rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50"
+              >
+                {isPublishing ? 'Updating...' : isPublished ? 'Unpublish' : 'Publish'}
               </button>
             </div>
           </div>

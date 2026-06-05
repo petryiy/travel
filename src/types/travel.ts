@@ -93,6 +93,8 @@ export interface SavedTripSummary {
   travelers: number
   style: TripStyle
   summary: string
+  isPublished?: boolean
+  publishedAt?: string | null
   createdAt: string
   updatedAt: string
 }

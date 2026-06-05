@@ -22,6 +22,8 @@ function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
     travelers: trip.travelers,
     style: trip.style,
     summary: trip.summary,
+    isPublished: trip.isPublished,
+    publishedAt: trip.publishedAt,
     createdAt: trip.createdAt,
     updatedAt: trip.updatedAt,
   }
@@ -36,6 +38,7 @@ export function useChat(userId: string | null) {
   const [isLoading, setIsLoading] = useState(false)
   const [savedTripId, setSavedTripId] = useState<string | null>(null)
   const [savedTripTitle, setSavedTripTitle] = useState<string | null>(null)
+  const [savedTripIsPublished, setSavedTripIsPublished] = useState(false)
   const [savedTrips, setSavedTrips] = useState<SavedTripSummary[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingTrips, setIsLoadingTrips] = useState(false)
@@ -110,6 +113,7 @@ export function useChat(userId: string | null) {
     setTripDetails(details)
     setSavedTripId(null)
     setSavedTripTitle(null)
+    setSavedTripIsPublished(false)
     setItinerary(null)
     setClarification(null)
     setSaveStatus(null)
@@ -133,6 +137,7 @@ export function useChat(userId: string | null) {
     setClarification(null)
     setSavedTripId(null)
     setSavedTripTitle(null)
+    setSavedTripIsPublished(false)
     setSaveStatus(null)
     setSaveError(null)
   }, [])
@@ -165,6 +170,7 @@ export function useChat(userId: string | null) {
 
       setSavedTripId(data.trip.id)
       setSavedTripTitle(data.trip.title)
+      setSavedTripIsPublished(Boolean(data.trip.isPublished))
       setItinerary(data.trip.itinerary)
       setTripDetails(data.trip.itinerary.trip)
       setSavedTrips((prev) => [summary, ...prev.filter((trip) => trip.id !== summary.id)])
@@ -191,6 +197,7 @@ export function useChat(userId: string | null) {
       const data: { trip: SavedTrip } = await res.json()
       setSavedTripId(data.trip.id)
       setSavedTripTitle(data.trip.title)
+      setSavedTripIsPublished(Boolean(data.trip.isPublished))
       setMessages(data.trip.messages)
       setItinerary(data.trip.itinerary)
       setTripDetails(data.trip.itinerary.trip)
@@ -237,11 +244,38 @@ export function useChat(userId: string | null) {
 
       const data: { trip: SavedTripSummary } = await res.json()
       setSavedTripTitle(data.trip.title)
+      setSavedTripIsPublished(Boolean(data.trip.isPublished))
       setSavedTrips((prev) => [data.trip, ...prev.filter((trip) => trip.id !== data.trip.id)])
       setSaveStatus('Renamed trip')
       return true
     } catch {
       setSaveError('Could not rename this trip.')
+      return false
+    }
+  }, [userId, savedTripId])
+
+  const updateSavedTripPublishStatus = useCallback(async (isPublished: boolean) => {
+    if (!userId || !savedTripId) return false
+
+    setSaveStatus(null)
+    setSaveError(null)
+
+    try {
+      const res = await fetch(`/api/trips/${savedTripId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublished }),
+      })
+
+      if (!res.ok) throw new Error('Unable to update publish status')
+
+      const data: { trip: SavedTripSummary } = await res.json()
+      setSavedTripIsPublished(Boolean(data.trip.isPublished))
+      setSavedTrips((prev) => [data.trip, ...prev.filter((trip) => trip.id !== data.trip.id)])
+      setSaveStatus(data.trip.isPublished ? 'Published to gallery' : 'Removed from gallery')
+      return true
+    } catch {
+      setSaveError('Could not update gallery publishing.')
       return false
     }
   }, [userId, savedTripId])
@@ -255,6 +289,7 @@ export function useChat(userId: string | null) {
     isLoading,
     savedTripId,
     savedTripTitle,
+    savedTripIsPublished,
     savedTrips,
     isSaving,
     isLoadingTrips,
@@ -267,6 +302,7 @@ export function useChat(userId: string | null) {
     saveCurrentTrip,
     openSavedTrip,
     renameSavedTripTitle,
+    updateSavedTripPublishStatus,
     retry,
   }
 }

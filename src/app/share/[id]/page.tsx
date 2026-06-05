@@ -17,6 +17,7 @@ interface TripRow {
   summary: string
   itinerary: Itinerary
   messages: Message[] | null
+  author_name: string | null
   created_at: Date
   updated_at: Date
 }
@@ -31,6 +32,7 @@ function serializeRow(row: TripRow) {
     travelers: row.travelers,
     style: row.style as TripStyle,
     summary: row.summary,
+    authorName: row.author_name,
     itinerary: row.itinerary,
     messages: row.messages ?? [],
     createdAt: row.created_at.toISOString(),
@@ -42,7 +44,10 @@ async function getSharedTrip(id: string) {
   const client = await getClient()
   try {
     const { rows } = await client.query<TripRow>(
-      'SELECT * FROM trips WHERE id = $1',
+      `SELECT t.*, u.name AS author_name
+       FROM trips t
+       LEFT JOIN users u ON u.id = t.owner_id
+       WHERE t.id = $1`,
       [id]
     )
 
@@ -69,6 +74,7 @@ export default async function SharedTripPage({
         itinerary={trip.itinerary}
         savedTripTitle={trip.title}
         savedTripId={trip.id}
+        authorName={trip.authorName}
         isPublicView
       />
     </div>

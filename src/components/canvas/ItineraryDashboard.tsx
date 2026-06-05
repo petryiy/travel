@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable react-hooks/static-components */
+
 import { useMemo, useRef, useState } from 'react'
 import {
   DndContext,
@@ -135,11 +137,9 @@ interface ActivityCardProps {
 
 function ActivityCard({
   act,
-  index,
   dayIdx,
   actIdx,
   totalDays,
-  totalActivities,
   editingId,
   editingValue,
   isDragging = false,

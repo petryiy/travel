@@ -39,7 +39,9 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     saveCurrentTrip,
     openSavedTrip,
     renameSavedTripTitle,
+    updateSavedTripPublishStatus,
     retry,
+    savedTripIsPublished,
   } = useChat(userId)
 
   function handleSave() {
@@ -108,6 +110,8 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               isLoading={isLoading}
               savedTripId={savedTripId}
               savedTripTitle={savedTripTitle}
+              authorName={userName}
+              savedTripIsPublished={savedTripIsPublished}
               savedTrips={savedTrips}
               isSaving={isSaving}
               isLoadingTrips={isLoadingTrips}
@@ -120,6 +124,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               onSave={handleSave}
               onOpenSavedTrip={handleOpenTrip}
               onRenameSavedTrip={renameSavedTripTitle}
+              onPublishSavedTrip={updateSavedTripPublishStatus}
               onPresentationModeChange={setPresentationMode}
               onBackToDashboard={handleBackToDashboard}
               onRetry={retry}
