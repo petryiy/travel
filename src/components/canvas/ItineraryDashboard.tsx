@@ -19,7 +19,6 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Activity, DayPlan, Itinerary } from '@/types/travel'
-import { downloadItineraryMarkdown } from '@/lib/itineraryExport'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { MapView } from './MapView'
 
@@ -654,12 +653,6 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             >
               {isSaving ? 'Saving…' : savedTripId ? 'Save changes' : 'Save trip'}
             </button>
-            <button
-              type="button" onClick={() => downloadItineraryMarkdown(itinerary)}
-              className="rounded-full border border-[#d1c0aa] bg-transparent px-3 py-1.5 text-[11px] font-semibold text-[#75624c] transition hover:bg-[#fffaf1]"
-            >
-              Export .md
-            </button>
           </div>
         </div>
         {/* Row 2: inline meta chips */}
@@ -684,6 +677,10 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             </>
           )}
         </div>
+        {/* Row 3: trip summary */}
+        {itinerary.summary && (
+          <p className="pb-2 text-[11px] leading-5 text-[#75624c]">{itinerary.summary}</p>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
