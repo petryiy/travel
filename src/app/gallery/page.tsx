@@ -68,7 +68,7 @@ export default async function GalleryPage() {
   return (
     <main className="min-h-screen bg-[#f7f3ec] text-[#2f2419]">
       <header className="border-b border-[#e0d7cb] bg-[#fbf8f2]">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#3e3021] transition hover:text-[#5f7d59]">
             <span className="h-2.5 w-2.5 rounded-full bg-[#6f8a68] shadow-[0_0_0_4px_rgba(111,138,104,0.16)]" />
             MeetU
@@ -82,11 +82,11 @@ export default async function GalleryPage() {
         </div>
       </header>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-8 lg:px-8">
+      <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#6f8a68]">Public gallery</p>
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-[#2f2419]">Travel plans people made with MeetU</h1>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#2f2419] sm:text-4xl">Travel plans people made with MeetU</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#7d6c58]">
               Browse published itineraries for route ideas, daily flow, and future overview styles.
             </p>
@@ -97,7 +97,7 @@ export default async function GalleryPage() {
         </div>
 
         {trips.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-[#d5c6b3] bg-[#fffaf2] p-10 text-center">
+          <div className="rounded-3xl border border-dashed border-[#d5c6b3] bg-[#fffaf2] p-6 text-center sm:p-10">
             <p className="text-base font-bold text-[#2f2419]">No public trips yet</p>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#7d6c58]">
               Published plans will appear here once users share them with the Gallery.
@@ -114,12 +114,12 @@ export default async function GalleryPage() {
                 <Link
                   key={trip.id}
                   href={`/share/${trip.id}`}
-                  className="group min-h-64 rounded-3xl border border-[#e0d7cb] bg-[#fffaf2] p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cbbba5] hover:bg-white hover:shadow-md"
+                  className="group min-h-56 rounded-3xl border border-[#e0d7cb] bg-[#fffaf2] p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#cbbba5] hover:bg-white hover:shadow-md sm:min-h-64 sm:p-5"
                 >
                   <div className="flex h-full flex-col">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-2xl font-bold text-[#2f2419]">{trip.title || trip.destination}</p>
+                        <p className="truncate text-xl font-bold text-[#2f2419] sm:text-2xl">{trip.title || trip.destination}</p>
                         <p className="mt-1 text-sm font-medium text-[#7d6c58]">
                           {formatDateRange(trip.start_date, trip.end_date)}
                         </p>

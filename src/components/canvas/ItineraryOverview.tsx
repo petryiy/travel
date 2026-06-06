@@ -239,14 +239,14 @@ export function ItineraryOverview({
   }
 
   return (
-    <main className="journal-desk flex-1 overflow-y-auto text-[#3e3021]">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
+    <main className="journal-desk min-w-0 flex-1 overflow-y-auto text-[#3e3021]">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-3 py-4 sm:gap-6 sm:px-6 sm:py-5 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {onBackToDashboard ? (
             <button
               type="button"
               onClick={onBackToDashboard}
-              className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-4 py-2 text-sm font-semibold text-[#5c4630] shadow-sm transition hover:bg-white"
+              className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-3 py-2 text-sm font-semibold text-[#5c4630] shadow-sm transition hover:bg-white sm:px-4"
             >
               Dashboard
             </button>
@@ -257,14 +257,14 @@ export function ItineraryOverview({
           )}
 
           {!isPublicView && onEdit ? (
-            <div className="journal-sketch flex rounded-lg bg-[#fffaf0]/88 p-1 shadow-sm">
-              <span className="rounded-md bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7]">
+            <div className="journal-sketch flex max-w-full rounded-lg bg-[#fffaf0]/88 p-1 shadow-sm">
+              <span className="rounded-md bg-[#3f3428] px-3 py-2 text-sm font-semibold text-[#fff7e7] sm:px-4">
                 Overview
               </span>
               <button
                 type="button"
                 onClick={onEdit}
-                className="rounded-md px-4 py-2 text-sm font-semibold text-[#806a52] transition hover:bg-[#f6ead3] hover:text-[#3e3021]"
+                className="rounded-md px-3 py-2 text-sm font-semibold text-[#806a52] transition hover:bg-[#f6ead3] hover:text-[#3e3021] sm:px-4"
               >
                 Edit with agent
               </button>
@@ -276,9 +276,9 @@ export function ItineraryOverview({
           )}
         </div>
 
-        <section className="journal-paper journal-sketch rotate-[-0.12deg] rounded-lg px-5 py-7 sm:px-8 lg:px-10">
-          <span className="journal-tape absolute left-10 top-0 h-7 w-32 -translate-y-1/2 rotate-[-4deg] rounded-sm opacity-90" />
-          <span className="journal-tape absolute right-16 top-0 h-7 w-28 -translate-y-1/2 rotate-[5deg] rounded-sm opacity-75" />
+        <section className="journal-paper journal-sketch rotate-[-0.12deg] rounded-lg px-4 py-6 sm:px-8 sm:py-7 lg:px-10">
+          <span className="journal-tape absolute left-8 top-0 h-6 w-24 -translate-y-1/2 rotate-[-4deg] rounded-sm opacity-90 sm:left-10 sm:h-7 sm:w-32" />
+          <span className="journal-tape absolute right-8 top-0 h-6 w-20 -translate-y-1/2 rotate-[5deg] rounded-sm opacity-75 sm:right-16 sm:h-7 sm:w-28" />
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.32fr)_minmax(300px,0.68fr)] lg:items-end">
             <div>
@@ -307,7 +307,7 @@ export function ItineraryOverview({
                     }}
                     autoFocus
                     maxLength={120}
-                    className="journal-sketch w-full rounded-lg bg-[#fffdf5]/90 px-4 py-3 font-serif text-3xl font-bold leading-tight text-[#34271b] outline-none transition focus:border-[#70956c] focus:ring-4 focus:ring-[#dbe9d3] lg:text-5xl"
+                    className="journal-sketch w-full rounded-lg bg-[#fffdf5]/90 px-4 py-3 font-serif text-3xl font-bold leading-tight text-[#34271b] outline-none transition focus:border-[#70956c] focus:ring-4 focus:ring-[#dbe9d3] sm:text-4xl lg:text-5xl"
                     aria-label="Trip title"
                   />
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -332,7 +332,7 @@ export function ItineraryOverview({
                 </div>
               ) : (
                 <div className="mt-4 flex max-w-4xl flex-wrap items-end gap-3">
-                  <h1 className="max-w-3xl font-serif text-4xl font-bold leading-tight text-[#34271b] lg:text-6xl">
+                  <h1 className="max-w-3xl font-serif text-3xl font-bold leading-tight text-[#34271b] sm:text-4xl lg:text-6xl">
                     {title}
                   </h1>
                   {!isPublicView && (
@@ -373,7 +373,7 @@ export function ItineraryOverview({
                   {itinerary.trip.destination}
                 </p>
               )}
-              <p className="journal-note-lines mt-5 max-w-3xl border-l-2 border-[#b9a583] pl-4 text-base leading-8 text-[#5f4c36]">
+              <p className="journal-note-lines mt-5 max-w-3xl border-l-2 border-[#b9a583] pl-4 text-sm leading-7 text-[#5f4c36] sm:text-base sm:leading-8">
                 {itinerary.summary}
               </p>
 
@@ -395,7 +395,7 @@ export function ItineraryOverview({
               </div>
             </div>
 
-            <div className="journal-sketch relative rotate-[0.6deg] rounded-lg bg-[#fff7dc]/82 p-5">
+            <div className="journal-sketch relative rotate-[0.6deg] rounded-lg bg-[#fff7dc]/82 p-4 sm:p-5">
               <span className="journal-tape absolute left-1/2 top-0 h-5 w-24 -translate-x-1/2 -translate-y-1/2 rotate-[2deg] rounded-sm opacity-80" />
               <p className="font-serif text-xl font-bold text-[#3b2d20]">Trip rhythm</p>
               <dl className="mt-4 divide-y divide-dashed divide-[#bca986]">
@@ -445,7 +445,7 @@ export function ItineraryOverview({
             <div className="flex items-end justify-between gap-4 px-1">
               <div>
                 <p className="text-xs font-bold uppercase text-[#517052]">Daily flow</p>
-                <h2 className="mt-1 font-serif text-3xl font-bold text-[#34271b]">Days at a glance</h2>
+                <h2 className="mt-1 font-serif text-2xl font-bold text-[#34271b] sm:text-3xl">Days at a glance</h2>
               </div>
             </div>
 
@@ -455,7 +455,7 @@ export function ItineraryOverview({
                 return (
                   <article
                     key={`${day.day}-${day.date}`}
-                    className={`journal-paper journal-sketch rounded-lg p-5 sm:p-6 ${DAY_ROTATIONS[dayIndex % DAY_ROTATIONS.length]}`}
+                    className={`journal-paper journal-sketch rounded-lg p-4 sm:p-6 ${DAY_ROTATIONS[dayIndex % DAY_ROTATIONS.length]}`}
                   >
                     <span className="journal-tape absolute left-8 top-0 h-5 w-24 -translate-y-1/2 rotate-[-3deg] rounded-sm opacity-75" />
                     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -463,7 +463,7 @@ export function ItineraryOverview({
                         <p className="journal-sketch inline-flex rotate-[-1deg] rounded-md bg-[#dce9ef] px-3 py-1.5 text-xs font-bold text-[#41606f]">
                           Day {day.day}
                         </p>
-                        <h3 className="mt-3 font-serif text-2xl font-bold text-[#34271b]">{day.theme}</h3>
+                        <h3 className="mt-3 font-serif text-xl font-bold text-[#34271b] sm:text-2xl">{day.theme}</h3>
                         <p className="mt-1 text-sm font-semibold text-[#78634c]">
                           {formatDate(day.date)}
                           {window ? ` - ${window}` : ''}
@@ -477,7 +477,7 @@ export function ItineraryOverview({
                     <div className="journal-note-lines mt-5 divide-y divide-dashed divide-[#c7b58e]">
                       {day.activities.map((activity, index) => (
                         <div key={`${activity.title}-${index}`} className="grid gap-3 py-4 md:grid-cols-[116px_minmax(0,1fr)]">
-                          <div className="flex items-start gap-2 md:block">
+                          <div className="flex flex-wrap items-start gap-2 md:block">
                             <span className="journal-sketch inline-flex rounded-md bg-[#fff7d7] px-2.5 py-1 text-xs font-bold text-[#6c4f2b]">
                               {formatTimeRange(activity)}
                             </span>
@@ -505,7 +505,7 @@ export function ItineraryOverview({
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-6 lg:self-start">
-            <div className="journal-paper journal-sketch relative h-[430px] rounded-lg p-4">
+            <div className="journal-paper journal-sketch relative h-[320px] rounded-lg p-3 sm:h-[430px] sm:p-4">
               <span className="journal-tape absolute left-8 top-0 h-5 w-24 -translate-y-1/2 rotate-[-5deg] rounded-sm opacity-80" />
               <div className="h-full overflow-hidden rounded-md border border-[#c7b58e] bg-[#f8f1df]">
                 <MapView center={mapCenter} locations={mapLocations} />
@@ -537,8 +537,8 @@ export function ItineraryOverview({
         onClose={() => setIsPosterOpen(false)}
       />
       {isShareOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2118]/45 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[#c7b58e] bg-[#fffaf0] p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2118]/45 px-3 py-5 backdrop-blur-sm sm:px-4 sm:py-6">
+          <div className="w-full max-w-md rounded-2xl border border-[#c7b58e] bg-[#fffaf0] p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b8a64]">Share plan</p>
@@ -573,7 +573,7 @@ export function ItineraryOverview({
               <button
                 type="button"
                 onClick={() => setIsShareOpen(false)}
-                className="rounded-full border border-[#c7b58e] bg-white px-4 py-2 text-sm font-semibold text-[#6d5740] transition hover:bg-[#f7ead1]"
+                className="flex-1 rounded-full border border-[#c7b58e] bg-white px-4 py-2 text-sm font-semibold text-[#6d5740] transition hover:bg-[#f7ead1] sm:flex-none"
               >
                 Close
               </button>
@@ -581,7 +581,7 @@ export function ItineraryOverview({
                 type="button"
                 onClick={() => void handleCopyShareLink()}
                 disabled={!shareUrl}
-                className="rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50"
+                className="flex-1 rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50 sm:flex-none"
               >
                 Copy link
               </button>
@@ -590,8 +590,8 @@ export function ItineraryOverview({
         </div>
       )}
       {isPublishOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2118]/45 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[#c7b58e] bg-[#fffaf0] p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2b2118]/45 px-3 py-5 backdrop-blur-sm sm:px-4 sm:py-6">
+          <div className="w-full max-w-md rounded-2xl border border-[#c7b58e] bg-[#fffaf0] p-4 shadow-2xl sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b8a64]">Gallery</p>
@@ -628,7 +628,7 @@ export function ItineraryOverview({
               <button
                 type="button"
                 onClick={() => setIsPublishOpen(false)}
-                className="rounded-full border border-[#c7b58e] bg-white px-4 py-2 text-sm font-semibold text-[#6d5740] transition hover:bg-[#f7ead1]"
+                className="flex-1 rounded-full border border-[#c7b58e] bg-white px-4 py-2 text-sm font-semibold text-[#6d5740] transition hover:bg-[#f7ead1] sm:flex-none"
               >
                 Close
               </button>
@@ -636,7 +636,7 @@ export function ItineraryOverview({
                 type="button"
                 onClick={() => void handleConfirmPublishChange()}
                 disabled={isPublishing || !savedTripId}
-                className="rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50"
+                className="flex-1 rounded-full bg-[#3f3428] px-4 py-2 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938] disabled:opacity-50 sm:flex-none"
               >
                 {isPublishing ? 'Updating...' : isPublished ? 'Unpublish' : 'Publish'}
               </button>

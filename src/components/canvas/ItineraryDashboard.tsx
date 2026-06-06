@@ -622,12 +622,12 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-[#f4efe7] text-[#3e3021]">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f4efe7] text-[#3e3021]">
 
       {/* ── Cut 1: Compact header ── */}
-      <div className="shrink-0 border-b border-[#dfd4c5] bg-[#fbf7ef] px-4 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset]">
+      <div className="shrink-0 border-b border-[#dfd4c5] bg-[#fbf7ef] px-3 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset] sm:px-4">
         {/* Row 1: title + actions */}
-        <div className="flex h-12 items-center justify-between gap-4">
+        <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 py-2 sm:gap-4 sm:py-0">
           <div className="flex min-w-0 items-center gap-2">
             <span className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-[#6f8a68] sm:inline">Editing workspace</span>
             <span className="hidden text-[#d8c9b5] sm:inline">·</span>
@@ -683,10 +683,10 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <section className="flex min-h-0 w-[58%] flex-col border-r border-[#dfd4c5]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+        <section className="flex min-h-[62dvh] flex-col border-b border-[#dfd4c5] lg:min-h-0 lg:w-[58%] lg:border-b-0 lg:border-r">
           {/* Day tabs */}
-          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-[#dfd4c5] bg-[#fbf7ef]/70 px-4 py-2">
+          <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-[#dfd4c5] bg-[#fbf7ef]/70 px-3 py-2 sm:px-4">
             {itinerary.days.map((d, i) => (
               <button
                 key={i}
@@ -703,7 +703,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
           </div>
 
           {/* Scrollable content: day strip + activities + summary + notes */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
             {day && (
               <>
                 {/* ── Cut 2: Slim day strip (replaces the large card) ── */}
@@ -716,7 +716,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                     />
                   </h3>
                   <span className="text-[11px] text-[#a69682]">{day.date}{currentDayWindow ? ` · ${currentDayWindow}` : ''}</span>
-                  <span className="ml-auto flex gap-1.5 text-[11px] font-semibold text-[#66523b]">
+                  <span className="flex w-full gap-1.5 text-[11px] font-semibold text-[#66523b] sm:ml-auto sm:w-auto">
                     <span className="rounded-full bg-[#f0e4d4] px-2.5 py-0.5">{day.activities.length} stops</span>
                     <span className="rounded-full bg-[#e1eadb] px-2.5 py-0.5">{formatMinutes(dayTravelMinutes)} travel</span>
                   </span>
@@ -837,8 +837,8 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
         </section>
 
         {/* Map sidebar */}
-        <aside className="flex min-w-[320px] flex-1 flex-col gap-3 p-4">
-          <div className="flex min-h-0 flex-1 flex-col rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-3 shadow-[0_18px_40px_rgba(75,58,36,0.08)]">
+        <aside className="flex min-h-[420px] w-full flex-col gap-3 p-3 sm:p-4 lg:min-h-0 lg:min-w-[320px] lg:flex-1">
+          <div className="flex min-h-[340px] flex-1 flex-col rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-3 shadow-[0_18px_40px_rgba(75,58,36,0.08)] lg:min-h-0">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Working map</p>
@@ -848,7 +848,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                 <p>{mapLocations.length} pins · {formatMinutes(dayTravelMinutes)}</p>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden rounded-[18px] border border-[#d1c0aa] bg-[#e9e1d4]">
+            <div className="min-h-[280px] flex-1 overflow-hidden rounded-[18px] border border-[#d1c0aa] bg-[#e9e1d4] lg:min-h-0">
               <MapView center={mapCenter} locations={mapLocations} activeDay={day?.day} />
             </div>
           </div>

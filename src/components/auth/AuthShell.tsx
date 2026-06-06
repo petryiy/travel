@@ -18,9 +18,9 @@ interface AuthShellProps {
 
 export function AuthShell({ title, subtitle, children }: AuthShellProps) {
   return (
-    <div className="flex flex-col lg:flex-row h-screen overflow-hidden" style={{ background: "#0a0f1a" }}>
+    <div className="flex h-dvh flex-col overflow-hidden lg:flex-row" style={{ background: "#0a0f1a" }}>
       {/* Left — DomeGallery */}
-      <div className="relative hidden lg:block lg:h-screen overflow-hidden lg:w-[70%]">
+      <div className="relative hidden overflow-hidden lg:block lg:h-dvh lg:w-[70%]">
         <DomeGallery
           images={TRAVEL_IMAGES}
           fit={1}
@@ -41,7 +41,7 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
       </div>
 
       {/* Right — Auth panel */}
-      <div className="relative h-screen w-full lg:w-[30%] flex flex-col items-center justify-center px-6 sm:px-8 lg:px-10 overflow-y-auto py-10">
+      <div className="relative flex h-dvh w-full flex-col items-center justify-center overflow-y-auto px-6 py-10 sm:px-8 lg:w-[30%] lg:px-10">
         <div className="animate-fade-blur flex flex-col items-center w-full max-w-[300px] gap-6" style={{ animationDelay: "0.05s" }}>
 
           {/* Logo */}

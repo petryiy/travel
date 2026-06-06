@@ -44,15 +44,15 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
   }
 
   return (
-    <div className="flex-1 overflow-y-auto flex items-start justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
+    <div className="flex-1 overflow-y-auto flex items-start justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-8">
       <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">✈️</div>
+        <div className="mb-6 text-center sm:mb-8">
+          <div className="mb-3 text-4xl sm:text-5xl">✈️</div>
           <h1 className="text-2xl font-bold text-zinc-900">Plan your next trip</h1>
           <p className="text-zinc-500 text-sm mt-1.5">Tell us the basics and Gemini will do the rest</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl shadow-zinc-200/60 p-7 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl bg-white p-5 shadow-xl shadow-zinc-200/60 sm:p-7">
           {/* Destination */}
           <div>
             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
@@ -82,7 +82,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
                 Start date
@@ -111,7 +111,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
                 Daily start
@@ -172,7 +172,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
             <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
               Trip style
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {STYLES.map((s) => (
                 <button
                   key={s.value}
@@ -203,7 +203,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
           </button>
         </form>
 
-        <div className="mt-5 bg-white rounded-2xl shadow-sm border border-zinc-100 p-4">
+        <div className="mt-5 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-zinc-900">Saved trips</h2>
             {isLoadingSavedTrips && <span className="text-xs text-zinc-400">Loading...</span>}
