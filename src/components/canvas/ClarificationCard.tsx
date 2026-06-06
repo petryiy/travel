@@ -10,9 +10,9 @@ interface Props {
 
 export function ClarificationCard({ clarification, onSend, isLoading }: Props) {
   return (
-    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
+    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-8">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl shadow-xl shadow-zinc-200/60 p-8">
+        <div className="rounded-3xl bg-white p-5 shadow-xl shadow-zinc-200/60 sm:p-8">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shrink-0">
               G

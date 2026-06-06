@@ -69,7 +69,7 @@ export default async function SharedTripPage({
   if (!trip) notFound()
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh min-w-0 overflow-hidden">
       <ItineraryOverview
         itinerary={trip.itinerary}
         savedTripTitle={trip.title}

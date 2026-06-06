@@ -72,7 +72,7 @@ export function CanvasPanel({
 
   if (canvasState === 'loading') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="flex min-w-0 flex-1 items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
         <div className="text-center space-y-4">
           <div className="text-5xl animate-bounce">✈️</div>
           <p className="text-zinc-600 font-medium">Gemini is planning your trip…</p>
@@ -84,7 +84,7 @@ export function CanvasPanel({
 
   if (canvasState === 'error') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-rose-50 via-white to-orange-50">
+      <div className="flex min-w-0 flex-1 items-center justify-center bg-gradient-to-br from-rose-50 via-white to-orange-50">
         <div className="text-center space-y-4 max-w-xs px-6">
           <div className="text-5xl">😔</div>
           <div>
@@ -143,7 +143,7 @@ export function CanvasPanel({
 
   // Fallback: still loading or transitioning
   return (
-    <div className="flex-1 flex items-center justify-center bg-zinc-50">
+    <div className="flex min-w-0 flex-1 items-center justify-center bg-zinc-50">
       <div className="flex gap-1.5">
         <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
         <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" />

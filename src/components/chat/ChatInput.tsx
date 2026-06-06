@@ -35,7 +35,7 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
   }
 
   return (
-    <div className="border-t border-[#dfd4c5] bg-[#f6efe3] px-4 py-3">
+    <div className="border-t border-[#dfd4c5] bg-[#f6efe3] px-3 py-2.5 sm:px-4 sm:py-3">
       <div className="flex items-end gap-2 rounded-[24px] border border-[#d8c9b5] bg-[#fffaf1] px-3 py-2 shadow-sm transition focus-within:border-[#8ba27e] focus-within:ring-4 focus-within:ring-[#8ba27e]/15">
         <textarea
           ref={textareaRef}
@@ -59,7 +59,7 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
           </svg>
         </button>
       </div>
-      <p className="mt-1.5 text-center text-[11px] text-[#a69682]">
+      <p className="mt-1.5 hidden text-center text-[11px] text-[#a69682] sm:block">
         Shift+Enter for new line · Enter to send
       </p>
     </div>

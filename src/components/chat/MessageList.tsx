@@ -17,7 +17,7 @@ export function MessageList({ messages, isLoading }: Props) {
 
   return (
     <div
-      className="flex-1 space-y-4 overflow-y-auto px-4 py-5"
+      className="flex-1 space-y-3 overflow-y-auto px-3 py-4 sm:space-y-4 sm:px-4 sm:py-5"
       style={{
         backgroundImage: 'radial-gradient(rgba(92, 73, 48, 0.08) 0.7px, transparent 0.7px)',
         backgroundSize: '14px 14px',
@@ -40,7 +40,7 @@ export function MessageList({ messages, isLoading }: Props) {
             </div>
           )}
           <div
-            className={`max-w-[82%] rounded-[22px] px-4 py-3 text-sm leading-relaxed shadow-sm ${
+            className={`max-w-[88%] rounded-[22px] px-4 py-3 text-sm leading-relaxed shadow-sm sm:max-w-[82%] ${
               msg.role === 'user'
                 ? 'rounded-br-md bg-[#5f7d59] text-white'
                 : 'rounded-bl-md border border-[#e3d5c3] bg-[#fffaf1] text-[#3e3021]'

@@ -73,7 +73,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
   return (
     <>
       <div className="flex h-full flex-col overflow-hidden bg-[#f4efe7]">
-        <header className="flex items-center justify-between border-b border-[#dfd4c5] bg-[#fbf7ef] px-5 py-3 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset] shrink-0">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#dfd4c5] bg-[#fbf7ef] px-3 py-2.5 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset] sm:px-5 sm:py-3">
           <button
             type="button"
             onClick={handleBackToDashboard}
@@ -93,7 +93,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
             onOpenTrip={handleOpenTrip}
           />
         ) : (
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
             {presentationMode === 'edit' && (
               <ChatPanel
                 messages={messages}
