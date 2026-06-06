@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import type { Activity, DayPlan, Itinerary } from '@/types/travel'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
+import { downloadItineraryPdf } from '@/lib/itineraryPdf'
 import { createItineraryPosterDataUrl } from '@/lib/posterExport'
 import { MapView } from './MapView'
 import { PosterExportModal } from './PosterExportModal'
@@ -182,6 +183,10 @@ export function ItineraryOverview({
     }
   }
 
+  function handleExportPdf() {
+    downloadItineraryPdf(itinerary, { title, authorName: shownAuthorName })
+  }
+
   function handleOpenShare() {
     if (!savedTripId) {
       setShareUrl(null)
@@ -330,18 +335,36 @@ export function ItineraryOverview({
                   <h1 className="max-w-3xl font-serif text-4xl font-bold leading-tight text-[#34271b] lg:text-6xl">
                     {title}
                   </h1>
-                  {!isPublicView && onRenameTitle && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDraftTitle(title)
-                        setTitleError(null)
-                        setIsEditingTitle(true)
-                      }}
-                      className="journal-sketch mb-1 rotate-[1deg] rounded-lg bg-[#fff7d7] px-3 py-1.5 text-sm font-semibold text-[#6c4f2b] shadow-sm transition hover:bg-[#ffefba]"
-                    >
-                      Rename
-                    </button>
+                  {!isPublicView && (
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      {onRenameTitle && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraftTitle(title)
+                            setTitleError(null)
+                            setIsEditingTitle(true)
+                          }}
+                          className="journal-sketch rotate-[1deg] rounded-lg bg-[#fff7d7] px-3 py-1.5 text-sm font-semibold text-[#6c4f2b] shadow-sm transition hover:bg-[#ffefba]"
+                        >
+                          Rename
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleOpenShare}
+                        className="journal-sketch rounded-lg bg-[#d8e7d2] px-3 py-1.5 text-sm font-semibold text-[#426145] shadow-sm transition hover:bg-[#cbe1c2]"
+                      >
+                        Share
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenPublish}
+                        className="journal-sketch rounded-lg bg-[#fffaf0] px-3 py-1.5 text-sm font-semibold text-[#5e4932] shadow-sm transition hover:bg-white"
+                      >
+                        {isPublished ? 'Unpublish' : 'Publish'}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -393,31 +416,26 @@ export function ItineraryOverview({
                   <dd className="text-right text-sm font-bold text-[#34271b]">{finalDay ? formatDate(finalDay.date) : '-'}</dd>
                 </div>
               </dl>
-              {!isPublicView && (
-                <>
+              <div>
+                <button
+                  type="button"
+                  onClick={handleExportPdf}
+                  className="journal-sketch mt-4 w-full rounded-lg bg-[#fff7d7] px-4 py-3 text-sm font-semibold text-[#6c4f2b] transition hover:bg-[#ffefba]"
+                >
+                  Export PDF
+                </button>
+                {!isPublicView && (
+                  <>
                   <button
                     type="button"
                     onClick={() => void handleOpenPoster()}
-                    className="journal-sketch mt-4 w-full rounded-lg bg-[#3f3428] px-4 py-3 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938]"
+                    className="journal-sketch mt-3 w-full rounded-lg bg-[#3f3428] px-4 py-3 text-sm font-semibold text-[#fff7e7] transition hover:bg-[#5a4938]"
                   >
                     Export poster
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenShare}
-                    className="journal-sketch mt-3 w-full rounded-lg bg-[#d8e7d2] px-4 py-3 text-sm font-semibold text-[#426145] transition hover:bg-[#cbe1c2]"
-                  >
-                    Share
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenPublish}
-                    className="journal-sketch mt-3 w-full rounded-lg bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#5e4932] transition hover:bg-white"
-                  >
-                    {isPublished ? 'Unpublish from Gallery' : 'Publish to Gallery'}
-                  </button>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>
