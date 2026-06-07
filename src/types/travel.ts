@@ -32,6 +32,9 @@ export interface Activity {
   location: string
   coordinates?: { lat: number; lng: number }
   type: 'food' | 'attraction' | 'transport' | 'accommodation' | 'activity'
+  hoursNote?: string
+  hoursWarning?: string
+  hoursSource?: 'google' | 'osm' | 'gemini'
 }
 
 export interface DayPlan {

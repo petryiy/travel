@@ -67,6 +67,54 @@ export function useChat(userId: string | null) {
     return () => window.clearTimeout(timer)
   }, [loadSavedTrips])
 
+  const checkHours = useCallback(async (newItinerary: Itinerary) => {
+    const activities = newItinerary.days.flatMap((day, dayIdx) =>
+      day.activities
+        .filter((act) => act.coordinates && act.startTime)
+        .map((act, actIdx) => ({
+          dayIdx,
+          actIdx,
+          locationName: act.location,
+          lat: act.coordinates!.lat,
+          lng: act.coordinates!.lng,
+          date: day.date,
+          startTime: act.startTime!,
+        }))
+    )
+    if (activities.length === 0) return
+
+    try {
+      const res = await fetch('/api/check-hours', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activities }),
+      })
+      const data: { results: Array<{ dayIdx: number; actIdx: number; source: string; hoursNote: string | null; hoursWarning: string | null }> } = await res.json()
+
+      setItinerary((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          days: prev.days.map((day, di) => ({
+            ...day,
+            activities: day.activities.map((act, ai) => {
+              const result = data.results.find((r) => r.dayIdx === di && r.actIdx === ai)
+              if (!result || result.source === 'none') return act
+              return {
+                ...act,
+                hoursNote: result.hoursNote ?? act.hoursNote,
+                hoursWarning: result.hoursWarning ?? act.hoursWarning,
+                hoursSource: result.source as 'google' | 'osm',
+              }
+            }),
+          })),
+        }
+      })
+    } catch {
+      // hours check is non-critical; silently ignore errors
+    }
+  }, [])
+
   const callGemini = useCallback(async (
     nextMessages: Message[],
     details?: TripDetails,
@@ -97,6 +145,7 @@ export function useChat(userId: string | null) {
         setTripDetails(data.canvas.itinerary.trip)
         setClarification(null)
         setCanvasState('itinerary')
+        void checkHours(data.canvas.itinerary)
       } else {
         setCanvasState((prev) => (prev === 'loading' ? 'clarification' : prev))
       }
@@ -107,7 +156,7 @@ export function useChat(userId: string | null) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [checkHours])
 
   const submitSetup = useCallback(async (details: TripDetails) => {
     setTripDetails(details)

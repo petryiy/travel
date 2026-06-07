@@ -38,7 +38,9 @@ Response schema:
               "description": "What to do and why it's great",
               "location": "Venue / neighborhood name",
               "coordinates": { "lat": 0.0, "lng": 0.0 },
-              "type": "food|attraction|transport|accommodation|activity"
+              "type": "food|attraction|transport|accommodation|activity",
+              "hoursNote": "Open Mon–Sat 09:00–18:00, closed Sun" | null,
+              "hoursWarning": "Scheduled at 08:30 but venue opens at 09:00" | null
             }
           ]
         }
@@ -72,6 +74,7 @@ Rules:
 - Avoid impossible overlaps. Leave small buffers for meals, queues, check-in, and transit.
 - If the user mentions a booking, reservation, ticket, flight, train, meeting, or "I have an activity at 14:00", mark that activity isFixedTime = true and rearrange the rest of that day around it.
 - Keep keyLocations aligned with the itinerary activities so the map can show each day's places.
+- For each activity, if you know the venue's typical opening hours, set hoursNote to a concise human-readable string (e.g. "Open Mon–Sat 09:00–18:00"). If the planned startTime falls outside those known hours, set hoursWarning to a short explanation (e.g. "Scheduled at 08:30 but opens at 09:00"). Leave both null if you are not confident about the hours.
 - Keep "message" friendly and conversational, as if texting a friend.`
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
