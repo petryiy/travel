@@ -336,6 +336,19 @@ function ActivityCard({
           textareaCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-1 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40 resize-none"
         />
       </div>
+
+      {act.hoursWarning && (
+        <div
+          className="mt-2.5 flex items-start gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5"
+          title={act.hoursSource ? `Source: ${act.hoursSource}` : undefined}
+        >
+          <span className="mt-px shrink-0 text-amber-500 text-xs">⚠</span>
+          <span className="text-[11px] font-medium leading-4 text-amber-700">{act.hoursWarning}</span>
+        </div>
+      )}
+      {!act.hoursWarning && act.hoursNote && (
+        <p className="mt-2 text-[11px] text-[#9e8c78]">🕐 {act.hoursNote}</p>
+      )}
     </div>
   )
 }
