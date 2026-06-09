@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { signIn } from 'next-auth/react'
+import { useEffect, useState, FormEvent } from 'react'
+import { getProviders, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 type View = 'prompt' | 'login' | 'register'
@@ -19,6 +19,23 @@ export function GuestSaveModal({ onClose, onSave }: Props) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [hasGoogleProvider, setHasGoogleProvider] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    getProviders()
+      .then((providers) => {
+        if (active) setHasGoogleProvider(Boolean(providers?.google))
+      })
+      .catch(() => {
+        if (active) setHasGoogleProvider(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   function switchView(next: View) {
     setError(null)
@@ -38,7 +55,20 @@ export function GuestSaveModal({ onClose, onSave }: Props) {
   }
 
   async function handleGoogle() {
-    await signIn('google', { callbackUrl: window.location.href })
+    setError(null)
+
+    if (hasGoogleProvider === false) {
+      setError('Google sign-in is not configured yet.')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await signIn('google', { redirectTo: window.location.href })
+    } catch {
+      setError('Could not start Google sign-in. Please try again.')
+      setIsLoading(false)
+    }
   }
 
   async function handleRegister(e: FormEvent) {
@@ -127,9 +157,10 @@ export function GuestSaveModal({ onClose, onSave }: Props) {
             <button
               type="button"
               onClick={handleGoogle}
-              className="w-full flex items-center justify-center gap-2.5 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition"
+              disabled={isLoading || hasGoogleProvider === false}
+              className="w-full flex items-center justify-center gap-2.5 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-55 transition"
             >
-              <GoogleIcon /> Continue with Google
+              <GoogleIcon /> {isLoading ? 'Opening Google...' : hasGoogleProvider === false ? 'Google sign-in unavailable' : 'Continue with Google'}
             </button>
 
             <div className="flex items-center gap-3 text-xs text-zinc-400">

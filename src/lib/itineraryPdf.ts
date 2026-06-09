@@ -203,7 +203,7 @@ function buildItineraryPages(itinerary: Itinerary, options: PdfOptions) {
   const author = sanitizeText(options.authorName || 'MeetU traveler')
 
   writer.addText(title, { font: 'bold', size: 25, leading: 31, spaceAfter: 4 })
-  writer.addText(`Travel itinerary for ${itinerary.trip.destination}`, { size: 12, color: 0.28, spaceAfter: 2 })
+  writer.addText(`MeetU itinerary for ${itinerary.trip.destination}`, { size: 12, color: 0.28, spaceAfter: 2 })
   writer.addText(`Created by ${author}`, { size: 10.5, color: 0.36, spaceAfter: 8 })
   writer.addRule(2, 14)
 
@@ -317,7 +317,7 @@ export function downloadItineraryPdf(itinerary: Itinerary, options: PdfOptions) 
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = `${slugify(options.title || itinerary.trip.destination) || 'travel-itinerary'}.pdf`
+    anchor.download = `${slugify(options.title || itinerary.trip.destination) || 'meetu-itinerary'}.pdf`
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()

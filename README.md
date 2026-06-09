@@ -1,4 +1,4 @@
-# Travel Planner
+# MeetU
 
 AI-powered travel planning app. Chat with Gemini on the left; get a live itinerary and map on the right. Saved trips are persisted to Aurora PostgreSQL and can be exported as Markdown.
 

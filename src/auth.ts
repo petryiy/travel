@@ -20,17 +20,25 @@ const dsqlPool = {
   },
 } as unknown as Pool
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PostgresAdapter(dsqlPool),
+  trustHost: true,
   // Credentials provider requires JWT sessions — database strategy is not supported for it.
   // The adapter is still used by Google OAuth to persist users/accounts in Aurora DSQL.
   session: { strategy: 'jwt' },
 
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    ...(googleClientId && googleClientSecret
+      ? [
+          Google({
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+          }),
+        ]
+      : []),
 
     Credentials({
       credentials: {

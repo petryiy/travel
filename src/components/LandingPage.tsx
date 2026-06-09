@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { signIn } from "next-auth/react";
+import { getProviders, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TRAVEL_IMAGES } from "@/lib/travel-images";
 
@@ -35,6 +35,7 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasGoogleProvider, setHasGoogleProvider] = useState<boolean | null>(null);
 
   const [destIndex, setDestIndex] = useState(0);
   const [destVisible, setDestVisible] = useState(true);
@@ -50,6 +51,22 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
     }, 2500);
     return () => clearInterval(interval);
   }, [view]);
+
+  useEffect(() => {
+    let active = true;
+
+    getProviders()
+      .then((providers) => {
+        if (active) setHasGoogleProvider(Boolean(providers?.google));
+      })
+      .catch(() => {
+        if (active) setHasGoogleProvider(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function switchView(next: View) {
     setError(null);
@@ -75,7 +92,20 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
   }
 
   async function handleGoogle() {
-    await signIn("google", { callbackUrl });
+    setError(null);
+
+    if (hasGoogleProvider === false) {
+      setError("Google sign-in is not configured yet.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signIn("google", { redirectTo: callbackUrl });
+    } catch {
+      setError("Could not start Google sign-in. Please try again.");
+      setIsLoading(false);
+    }
   }
 
   async function handleRegister(e: FormEvent) {
@@ -156,10 +186,11 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
                 <button
                   type="button"
                   onClick={handleGoogle}
-                  className="w-full flex items-center justify-center gap-2.5 rounded-full border border-[#C8D9BF] bg-white px-4 py-2.5 text-sm font-medium text-[#486040] transition-all duration-300 hover:bg-[#EEF5EA] hover:border-[#68A058]/50 active:scale-[0.98]"
+                  disabled={isLoading || hasGoogleProvider === false}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-full border border-[#C8D9BF] bg-white px-4 py-2.5 text-sm font-medium text-[#486040] transition-all duration-300 hover:bg-[#EEF5EA] hover:border-[#68A058]/50 disabled:cursor-not-allowed disabled:opacity-55 active:scale-[0.98]"
                 >
                   <GoogleIcon />
-                  Continue with Google
+                  {isLoading ? "Opening Google..." : hasGoogleProvider === false ? "Google sign-in unavailable" : "Continue with Google"}
                 </button>
 
                 <Divider />
