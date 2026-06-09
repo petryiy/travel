@@ -23,7 +23,7 @@ export function ChatPanel({ messages, isLoading, onSend, hasItinerary = false, o
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[#35291d]">Agent notebook</p>
-              <p className="truncate text-xs text-[#8a7965]">{hasItinerary ? 'Refine the plan with your travel agent' : 'Start with the trip basics'}</p>
+              <p className="truncate text-xs text-[#8a7965]">{hasItinerary ? 'Refine the plan with MeetU' : 'Start with the trip basics'}</p>
             </div>
           </div>
           {onBackToDashboard && (

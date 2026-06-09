@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import type { Activity, DayPlan, Itinerary } from '@/types/travel'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { downloadItineraryPdf } from '@/lib/itineraryPdf'
@@ -250,6 +251,13 @@ export function ItineraryOverview({
             >
               Dashboard
             </button>
+          ) : isPublicView ? (
+            <Link
+              href="/dashboard"
+              className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-3 py-2 text-sm font-semibold text-[#5c4630] shadow-sm transition hover:bg-white sm:px-4"
+            >
+              Dashboard
+            </Link>
           ) : (
             <span className="journal-sketch rounded-lg bg-[#fffaf0]/90 px-4 py-2 text-sm font-semibold text-[#5c4630] shadow-sm">
               MeetU shared plan
@@ -283,7 +291,7 @@ export function ItineraryOverview({
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.32fr)_minmax(300px,0.68fr)] lg:items-end">
             <div>
               <p className="inline-flex rotate-[-1deg] rounded-md bg-[#d8e7d2] px-3 py-1.5 text-xs font-bold uppercase text-[#426145]">
-                Saved itinerary
+                MeetU itinerary
               </p>
               {(isPublicView || isPublished) && (
                 <p className="mt-3 inline-flex max-w-full flex-wrap rounded-full border border-[#d8c8a8] bg-[#fffdf5]/80 px-3 py-1.5 text-sm font-semibold text-[#6f8a68]">

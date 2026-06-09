@@ -336,7 +336,7 @@ async function drawHeader(draw: DrawContext, itinerary: Itinerary, title: string
 
   ctx.fillStyle = '#516e4e'
   ctx.font = '700 24px Arial, sans-serif'
-  ctx.fillText('TRAVEL JOURNAL POSTER', SIDE, 112)
+  ctx.fillText('MEETU TRAVEL JOURNAL', SIDE, 112)
 
   ctx.fillStyle = INK
   ctx.font = '700 72px Georgia, serif'
@@ -447,12 +447,12 @@ function drawFooter(draw: DrawContext, itinerary: Itinerary) {
   const { ctx } = draw
   ctx.fillStyle = '#6c5840'
   ctx.font = '700 20px Arial, sans-serif'
-  ctx.fillText(`Made for ${itinerary.trip.destination}`, SIDE, draw.y + 22)
+  ctx.fillText(`Made with MeetU for ${itinerary.trip.destination}`, SIDE, draw.y + 22)
 
   ctx.textAlign = 'right'
   ctx.fillStyle = '#8a765c'
   ctx.font = '600 17px Arial, sans-serif'
-  ctx.fillText('AI Travel Planner', POSTER_WIDTH - SIDE, draw.y + 22)
+  ctx.fillText('MeetU', POSTER_WIDTH - SIDE, draw.y + 22)
   ctx.textAlign = 'left'
 }
 

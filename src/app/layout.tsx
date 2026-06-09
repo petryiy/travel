@@ -3,8 +3,8 @@ import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Travel Planner",
-  description: "Plan your next trip with Gemini AI",
+  title: "MeetU",
+  description: "Plan, save, share, and export thoughtful travel itineraries with MeetU.",
 };
 
 export default function RootLayout({
