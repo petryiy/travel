@@ -10,6 +10,11 @@ import type {
   GeminiResponse,
   SavedTrip,
   SavedTripSummary,
+  CanvasTab,
+  HotelsCanvas,
+  FlightsCanvas,
+  HotelSuggestion,
+  FlightOption,
 } from '@/types/travel'
 
 function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
@@ -44,6 +49,10 @@ export function useChat(userId: string | null) {
   const [isLoadingTrips, setIsLoadingTrips] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<CanvasTab>('itinerary')
+  const [hotelCanvas, setHotelCanvas] = useState<HotelsCanvas | null>(null)
+  const [flightCanvas, setFlightCanvas] = useState<FlightsCanvas | null>(null)
+  const [pendingFlightOrigin, setPendingFlightOrigin] = useState<string | null>(null)
 
   const loadSavedTrips = useCallback(async () => {
     setIsLoadingTrips(true)
@@ -115,10 +124,79 @@ export function useChat(userId: string | null) {
     }
   }, [])
 
+  const fetchHotels = useCallback(async (
+    currentItinerary: Itinerary,
+    opts: { notes?: string } = {},
+  ) => {
+    const { destination, startDate, endDate, travelers } = currentItinerary.trip
+    setHotelCanvas({ panelState: 'searching', data: null })
+    try {
+      const res = await fetch('/api/hotels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination, checkIn: startDate, checkOut: endDate, guests: travelers }),
+      })
+      const data = await res.json() as { suggestions?: HotelSuggestion[]; source?: 'travelpayouts' | 'fallback' }
+      setHotelCanvas({
+        panelState: 'results',
+        data: {
+          cityName: destination,
+          checkIn: startDate,
+          checkOut: endDate,
+          guests: travelers,
+          geminiNote: opts.notes ?? '',
+          suggestions: data.suggestions ?? [],
+          source: data.source ?? 'fallback',
+        },
+      })
+    } catch {
+      setHotelCanvas({ panelState: 'error', data: null, errorMessage: 'Could not load hotel suggestions.' })
+    }
+  }, [])
+
+  const fetchFlights = useCallback(async (
+    currentItinerary: Itinerary,
+    opts: { originCode?: string | null; notes?: string } = {},
+  ) => {
+    const { destination, startDate, endDate, travelers } = currentItinerary.trip
+    setFlightCanvas({ panelState: 'searching', data: null })
+    try {
+      const res = await fetch('/api/flights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origin: opts.originCode ?? 'Unknown',
+          destination,
+          departureDate: startDate,
+          returnDate: endDate,
+          passengers: travelers,
+          originCode: opts.originCode ?? null,
+        }),
+      })
+      const data = await res.json() as { options?: FlightOption[]; source?: 'travelpayouts' | 'fallback' }
+      setFlightCanvas({
+        panelState: 'results',
+        data: {
+          originCity: opts.originCode ?? 'Your city',
+          destinationCity: destination,
+          departureDate: startDate,
+          returnDate: endDate,
+          passengers: travelers,
+          geminiNote: opts.notes ?? '',
+          options: data.options ?? [],
+          source: data.source ?? 'fallback',
+        },
+      })
+    } catch {
+      setFlightCanvas({ panelState: 'error', data: null, errorMessage: 'Could not load flight options.' })
+    }
+  }, [])
+
   const callGemini = useCallback(async (
     nextMessages: Message[],
     details?: TripDetails,
-    currentItinerary?: Itinerary | null
+    currentItinerary?: Itinerary | null,
+    tabContext?: 'hotels' | 'flights',
   ) => {
     setIsLoading(true)
     setSaveStatus(null)
@@ -129,7 +207,7 @@ export function useChat(userId: string | null) {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages, tripDetails: details, currentItinerary }),
+        body: JSON.stringify({ messages: nextMessages, tripDetails: details, currentItinerary, tabContext }),
       })
 
       const data: GeminiResponse = await res.json()
@@ -137,7 +215,23 @@ export function useChat(userId: string | null) {
       const assistantMessage: Message = { role: 'assistant', content: data.message }
       setMessages((prev) => [...prev, assistantMessage])
 
-      if (data.canvas.type === 'clarification' && data.canvas.clarification) {
+      if (data.canvas.type === 'hotels') {
+        const payload = data.canvas.hotels
+        if (payload?.question) {
+          setHotelCanvas({ panelState: 'asking', question: payload.question, questionSuggestions: payload.suggestions, data: null })
+        } else if (payload?.searchReady && currentItinerary) {
+          void fetchHotels(currentItinerary, { notes: payload.notes })
+        }
+      } else if (data.canvas.type === 'flights') {
+        const payload = data.canvas.flights
+        if (payload?.question) {
+          setFlightCanvas({ panelState: 'asking', question: payload.question, questionSuggestions: payload.suggestions, data: null })
+          if (payload.originCode) setPendingFlightOrigin(payload.originCode)
+        } else if (payload?.searchReady && currentItinerary) {
+          setPendingFlightOrigin(payload.originCode ?? null)
+          void fetchFlights(currentItinerary, { originCode: payload.originCode, notes: payload.notes })
+        }
+      } else if (data.canvas.type === 'clarification' && data.canvas.clarification) {
         setClarification(data.canvas.clarification)
         setCanvasState('clarification')
       } else if (data.canvas.type === 'itinerary' && data.canvas.itinerary) {
@@ -156,7 +250,7 @@ export function useChat(userId: string | null) {
     } finally {
       setIsLoading(false)
     }
-  }, [checkHours])
+  }, [checkHours, fetchHotels, fetchFlights])
 
   const submitSetup = useCallback(async (details: TripDetails) => {
     setTripDetails(details)
@@ -189,13 +283,60 @@ export function useChat(userId: string | null) {
     setSavedTripIsPublished(false)
     setSaveStatus(null)
     setSaveError(null)
+    setActiveTab('itinerary')
+    setHotelCanvas(null)
+    setFlightCanvas(null)
+    setPendingFlightOrigin(null)
   }, [])
 
-  const sendMessage = useCallback(async (text: string) => {
+  const switchTab = useCallback((tab: CanvasTab) => {
+    setActiveTab(tab)
+
+    if (tab === 'hotels' && hotelCanvas === null && itinerary) {
+      // Fetch real hotel data immediately — no Gemini dependency
+      void fetchHotels(itinerary)
+      // Also send a chat message so Gemini gives a recommendation blurb
+      const msg = `I'm looking at hotels for my trip to ${itinerary.trip.destination}. Can you give me a quick overview of what areas to consider?`
+      const userMessage: Message = { role: 'user', content: msg }
+      const nextMessages = [...messages, userMessage]
+      setMessages(nextMessages)
+      void callGemini(nextMessages, tripDetails ?? undefined, undefined, 'hotels')
+    }
+
+    if (tab === 'flights' && flightCanvas === null && itinerary) {
+      // Set the asking state directly — don't wait for Gemini to return the question
+      setFlightCanvas({
+        panelState: 'asking',
+        question: `Where are you flying from to reach ${itinerary.trip.destination}?`,
+        questionSuggestions: ['New York (JFK)', 'London (LHR)', 'Los Angeles (LAX)', 'Toronto (YYZ)', 'Sydney (SYD)', 'Tokyo (NRT)'],
+        data: null,
+      })
+      // Also open the chat conversation
+      const msg = `I'm looking for flights to ${itinerary.trip.destination}.`
+      const userMessage: Message = { role: 'user', content: msg }
+      const nextMessages = [...messages, userMessage]
+      setMessages(nextMessages)
+      void callGemini(nextMessages, tripDetails ?? undefined, undefined, 'flights')
+    }
+  }, [hotelCanvas, flightCanvas, itinerary, messages, tripDetails, callGemini, fetchHotels])
+
+  // Called when user selects a departure airport (from chip or parsed from chat)
+  const selectFlightOrigin = useCallback((originCode: string, originLabel: string) => {
+    if (!itinerary) return
+    setPendingFlightOrigin(originCode)
+    void fetchFlights(itinerary, { originCode, notes: '' })
+    // Echo in chat
+    const userMessage: Message = { role: 'user', content: `Flying from ${originLabel}` }
+    const nextMessages = [...messages, userMessage]
+    setMessages(nextMessages)
+    void callGemini(nextMessages, tripDetails ?? undefined, undefined, 'flights')
+  }, [itinerary, fetchFlights, messages, tripDetails, callGemini])
+
+  const sendMessage = useCallback(async (text: string, opts?: { tabContext?: 'hotels' | 'flights' }) => {
     const userMessage: Message = { role: 'user', content: text }
     const nextMessages = [...messages, userMessage]
     setMessages(nextMessages)
-    await callGemini(nextMessages, tripDetails ?? undefined, itinerary)
+    await callGemini(nextMessages, tripDetails ?? undefined, itinerary, opts?.tabContext)
   }, [messages, tripDetails, itinerary, callGemini])
 
   const saveCurrentTrip = useCallback(async () => {
@@ -329,6 +470,14 @@ export function useChat(userId: string | null) {
     }
   }, [userId, savedTripId])
 
+  const retryHotels = useCallback(() => {
+    if (itinerary) void fetchHotels(itinerary)
+  }, [itinerary, fetchHotels])
+
+  const retryFlights = useCallback(() => {
+    if (itinerary) void fetchFlights(itinerary, { originCode: pendingFlightOrigin })
+  }, [itinerary, fetchFlights, pendingFlightOrigin])
+
   return {
     messages,
     canvasState,
@@ -344,9 +493,16 @@ export function useChat(userId: string | null) {
     isLoadingTrips,
     saveStatus,
     saveError,
+    activeTab,
+    hotelCanvas,
+    flightCanvas,
     submitSetup,
     startNewTrip,
     sendMessage,
+    switchTab,
+    selectFlightOrigin,
+    retryHotels,
+    retryFlights,
     updateItinerary,
     saveCurrentTrip,
     openSavedTrip,

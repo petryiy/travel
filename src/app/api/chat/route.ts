@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { normalizeItineraryMapData } from '@/lib/itineraryMap'
 import type { Itinerary, Message, TripDetails } from '@/types/travel'
 
-const SYSTEM_PROMPT = `You are an expert travel planning assistant. Your job is to help users plan detailed, personalized travel itineraries.
+const SYSTEM_PROMPT = `You are an expert travel planning assistant. Your job is to help users plan detailed, personalized travel itineraries, and also help them find hotels and flights.
 
 CRITICAL: You must ALWAYS respond with valid JSON only. No markdown, no prose, no code blocks. Pure JSON.
 
@@ -11,10 +11,23 @@ Response schema:
 {
   "message": "Your conversational reply to the user",
   "canvas": {
-    "type": "none" | "clarification" | "itinerary",
+    "type": "none" | "clarification" | "itinerary" | "hotels" | "flights",
     "clarification": {
       "question": "A specific question you need answered",
       "suggestions": ["option 1", "option 2", "option 3"]
+    } | null,
+    "hotels": {
+      "question": "A question about hotel preferences (budget, neighborhood, amenities)" | null,
+      "suggestions": ["suggestion 1", "suggestion 2"] | null,
+      "searchReady": true | false,
+      "notes": "A 1-2 sentence note about what kind of hotels would suit this trip" | null
+    } | null,
+    "flights": {
+      "question": "A question about flights (origin city, airport preference)" | null,
+      "suggestions": ["City A (AAA)", "City B (BBB)"] | null,
+      "searchReady": true | false,
+      "originCode": "IATA code e.g. LHR" | null,
+      "notes": "A 1-2 sentence note about the route (direct flights, duration, best airlines)" | null
     } | null,
     "itinerary": {
       "trip": { "destination": "...", "accommodationLocation": "Hotel / neighborhood / address or null", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "travelers": 2, "style": "relax|culture|adventure|mixed", "dailyStartTime": "09:00", "dailyEndTime": "21:00" },
@@ -75,7 +88,20 @@ Rules:
 - If the user mentions a booking, reservation, ticket, flight, train, meeting, or "I have an activity at 14:00", mark that activity isFixedTime = true and rearrange the rest of that day around it.
 - Keep keyLocations aligned with the itinerary activities so the map can show each day's places.
 - For each activity, if you know the venue's typical opening hours, set hoursNote to a concise human-readable string (e.g. "Open Mon–Sat 09:00–18:00"). If the planned startTime falls outside those known hours, set hoursWarning to a short explanation (e.g. "Scheduled at 08:30 but opens at 09:00"). Leave both null if you are not confident about the hours.
-- Keep "message" friendly and conversational, as if texting a friend.`
+- Keep "message" friendly and conversational, as if texting a friend.
+
+HOTELS TAB (when ACTIVE_TAB is "hotels" appears in the user prompt):
+- Use canvas.type = "hotels" for ALL responses when the user is asking about hotels. Never use "clarification" for hotel questions.
+- Ask ONE clarifying question if you need more info (budget per night, neighborhood vs. city center, must-have amenities like pool/breakfast). Set hotels.question and hotels.suggestions (2-4 chips). Set hotels.searchReady = false.
+- When you have enough info (or the user did not specify and you can make good defaults), set hotels.searchReady = true and hotels.notes = a 1-2 sentence summary of what kind of hotel fits this trip.
+- In your message, suggest 2-3 specific, real, well-known hotels by name with a short reason why each fits the trip style and destination. Include neighborhood.
+
+FLIGHTS TAB (when ACTIVE_TAB is "flights" appears in the user prompt):
+- Use canvas.type = "flights" for ALL responses when the user is asking about flights. Never use "clarification" for flight questions.
+- If the origin city is unknown, set flights.question = "Where are you flying from?" with 4 major city suggestions as chips. Set flights.searchReady = false.
+- If the origin city has multiple major airports (e.g. London: Heathrow/Gatwick, New York: JFK/LGA/EWR, Tokyo: HND/NRT, Paris: CDG/ORY), ask "Which airport do you prefer?" with airport name plus IATA code chips. Set flights.searchReady = false.
+- Once the airport is confirmed, set flights.originCode = the 3-letter IATA code (e.g. "LHR"), flights.searchReady = true, flights.notes = brief note on the route (direct availability, typical duration, recommended airlines).
+- In your message, give a helpful overview of the route: whether direct flights exist, rough journey time, which airlines typically serve it.`
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -83,6 +109,7 @@ interface ChatRequest {
   messages: Message[]
   tripDetails?: TripDetails
   currentItinerary?: Itinerary | null
+  tabContext?: 'hotels' | 'flights'
 }
 
 const BOOKING_OR_MOVE_RE = /\b(booked|booking|reserved|reservation|ticket|tickets|slot|appointment|move|moved|reschedule|rescheduled|change|changed)\b/i
@@ -279,8 +306,26 @@ function parseModelJson(raw: string) {
 function buildUserPrompt(
   latestMessage: string,
   tripDetails?: TripDetails,
-  currentItinerary?: Itinerary | null
+  currentItinerary?: Itinerary | null,
+  tabContext?: 'hotels' | 'flights',
 ) {
+  // For hotel/flight tabs, never dump the full itinerary JSON — it causes Gemini
+  // to think the user is editing the itinerary and return canvas.type = "none".
+  if (tabContext) {
+    const trip = currentItinerary?.trip ?? tripDetails
+    const tripSummary = trip
+      ? `TRIP: ${trip.destination}, ${trip.startDate} to ${trip.endDate}, ${trip.travelers} traveler${trip.travelers !== 1 ? 's' : ''}, style: ${trip.style}`
+      : ''
+    return [
+      `[ACTIVE_TAB: ${tabContext}]`,
+      tripSummary,
+      '',
+      `USER: ${latestMessage}`,
+      '',
+      `You MUST use canvas.type = "${tabContext}" in your response. Do NOT use canvas.type = "itinerary", "none", or "clarification".`,
+    ].filter(Boolean).join('\n')
+  }
+
   if (!currentItinerary) {
     return [
       latestMessage,
@@ -303,13 +348,13 @@ function buildUserPrompt(
     'First identify whether the user is referring to an activity already present in CURRENT_ITINERARY_JSON, including close title/location matches. If yes, move or update that activity instead of adding another copy.',
     'If an activity moves from one day to another, remove the old instance and rebalance both the source day and destination day.',
     'Preserve fixed-time activities unless the user explicitly changes them. Recalculate start/end times and travelFromPrevious for the affected day.',
-    'Keep the revised day complete and well-paced inside the user’s planning window.',
+    'Keep the revised day complete and well-paced inside the user\'s planning window.',
   ].filter(Boolean).join('\n')
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, tripDetails, currentItinerary }: ChatRequest = await req.json()
+    const { messages, tripDetails, currentItinerary, tabContext }: ChatRequest = await req.json()
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash-lite',
@@ -327,7 +372,7 @@ export async function POST(req: NextRequest) {
     const lastMessage = messages[messages.length - 1]
 
     const chat = model.startChat({ history })
-    const result = await chat.sendMessage(buildUserPrompt(lastMessage.content, tripDetails, currentItinerary))
+    const result = await chat.sendMessage(buildUserPrompt(lastMessage.content, tripDetails, currentItinerary, tabContext))
     const raw = result.response.text()
 
     const parsed = parseModelJson(raw)

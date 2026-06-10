@@ -74,10 +74,99 @@ export interface ClarificationData {
   suggestions?: string[]
 }
 
+export interface HotelsGeminiPayload {
+  question?: string
+  suggestions?: string[]
+  searchReady?: boolean
+  notes?: string
+}
+
+export interface FlightsGeminiPayload {
+  question?: string
+  suggestions?: string[]
+  searchReady?: boolean
+  originCode?: string | null
+  notes?: string
+}
+
 export interface GeminiCanvas {
-  type: 'none' | 'clarification' | 'itinerary'
+  type: 'none' | 'clarification' | 'itinerary' | 'hotels' | 'flights'
   clarification?: ClarificationData | null
   itinerary?: Itinerary | null
+  hotels?: HotelsGeminiPayload | null
+  flights?: FlightsGeminiPayload | null
+}
+
+export type CanvasTab = 'itinerary' | 'hotels' | 'flights'
+
+export type HotelPanelState = 'idle' | 'asking' | 'searching' | 'results' | 'error'
+
+export interface HotelSuggestion {
+  id: string
+  name: string
+  stars: number | null
+  pricePerNight: number | null
+  currency: string
+  neighborhood: string
+  highlights: string[]
+  bookingUrl: string
+  googleHotelsUrl: string
+  primaryLabel?: string   // overrides "Booking.com ↗" button text
+  secondaryLabel?: string // overrides "Google Hotels ↗" button text
+}
+
+export interface HotelCanvasData {
+  cityName: string
+  checkIn: string
+  checkOut: string
+  guests: number
+  geminiNote: string
+  suggestions: HotelSuggestion[]
+  source: 'travelpayouts' | 'amadeus' | 'fallback'
+}
+
+export interface HotelsCanvas {
+  panelState: HotelPanelState
+  question?: string
+  questionSuggestions?: string[]
+  data: HotelCanvasData | null
+  errorMessage?: string
+}
+
+export type FlightPanelState = 'idle' | 'asking' | 'searching' | 'results' | 'error'
+
+export interface FlightOption {
+  id: string
+  airline: string | null
+  from: string
+  to: string
+  departureDate: string
+  durationMinutes: number | null
+  stops: number
+  totalPrice: number | null
+  currency: string
+  skyscannerUrl: string
+  googleFlightsUrl: string
+  source: 'travelpayouts' | 'amadeus' | 'fallback'
+}
+
+export interface FlightCanvasData {
+  originCity: string
+  destinationCity: string
+  departureDate: string
+  returnDate: string | null
+  passengers: number
+  geminiNote: string
+  options: FlightOption[]
+  source: 'travelpayouts' | 'amadeus' | 'fallback'
+}
+
+export interface FlightsCanvas {
+  panelState: FlightPanelState
+  question?: string
+  questionSuggestions?: string[]
+  data: FlightCanvasData | null
+  errorMessage?: string
 }
 
 export interface GeminiResponse {

@@ -32,9 +32,16 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     isLoadingTrips,
     saveStatus,
     saveError,
+    activeTab,
+    hotelCanvas,
+    flightCanvas,
     submitSetup,
     startNewTrip,
     sendMessage,
+    switchTab,
+    selectFlightOrigin,
+    retryHotels,
+    retryFlights,
     updateItinerary,
     saveCurrentTrip,
     openSavedTrip,
@@ -118,6 +125,9 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               saveStatus={saveStatus}
               saveError={saveError}
               presentationMode={presentationMode}
+              activeTab={activeTab}
+              hotelCanvas={hotelCanvas}
+              flightCanvas={flightCanvas}
               onSetup={submitSetup}
               onSend={sendMessage}
               onUpdateItinerary={updateItinerary}
@@ -128,6 +138,10 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               onPresentationModeChange={setPresentationMode}
               onBackToDashboard={handleBackToDashboard}
               onRetry={retry}
+              onSwitchTab={switchTab}
+              onFlightOriginSelect={selectFlightOrigin}
+              onRetryHotels={retryHotels}
+              onRetryFlights={retryFlights}
             />
           </div>
         )}

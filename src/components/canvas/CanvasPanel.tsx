@@ -1,10 +1,13 @@
 'use client'
 
-import type { CanvasState, TripDetails, Itinerary, ClarificationData, SavedTripSummary } from '@/types/travel'
+import type { CanvasState, TripDetails, Itinerary, ClarificationData, SavedTripSummary, CanvasTab, HotelsCanvas, FlightsCanvas } from '@/types/travel'
 import { SetupForm } from './SetupForm'
 import { ClarificationCard } from './ClarificationCard'
 import { ItineraryDashboard } from './ItineraryDashboard'
 import { ItineraryOverview } from './ItineraryOverview'
+import { CanvasTabBar } from './CanvasTabBar'
+import { HotelsPanel } from './HotelsPanel'
+import { FlightsPanel } from './FlightsPanel'
 
 interface Props {
   canvasState: CanvasState
@@ -21,8 +24,11 @@ interface Props {
   saveStatus: string | null
   saveError: string | null
   presentationMode: 'overview' | 'edit'
+  activeTab: CanvasTab
+  hotelCanvas: HotelsCanvas | null
+  flightCanvas: FlightsCanvas | null
   onSetup: (details: TripDetails) => void
-  onSend: (text: string) => void
+  onSend: (text: string, opts?: { tabContext?: 'hotels' | 'flights' }) => void
   onUpdateItinerary: (itinerary: Itinerary) => void
   onSave: () => void
   onOpenSavedTrip: (tripId: string) => void
@@ -31,6 +37,10 @@ interface Props {
   onPresentationModeChange: (mode: 'overview' | 'edit') => void
   onBackToDashboard: () => void
   onRetry: () => void
+  onSwitchTab: (tab: CanvasTab) => void
+  onFlightOriginSelect: (originCode: string, originLabel: string) => void
+  onRetryHotels: () => void
+  onRetryFlights: () => void
 }
 
 export function CanvasPanel({
@@ -48,6 +58,9 @@ export function CanvasPanel({
   saveStatus,
   saveError,
   presentationMode,
+  activeTab,
+  hotelCanvas,
+  flightCanvas,
   onSetup,
   onSend,
   onUpdateItinerary,
@@ -58,6 +71,10 @@ export function CanvasPanel({
   onPresentationModeChange,
   onBackToDashboard,
   onRetry,
+  onSwitchTab,
+  onFlightOriginSelect,
+  onRetryHotels,
+  onRetryFlights,
 }: Props) {
   if (canvasState === 'setup') {
     return (
@@ -127,17 +144,58 @@ export function CanvasPanel({
       )
     }
 
+    const { destination, startDate, endDate, travelers } = itinerary.trip
+
     return (
-      <ItineraryDashboard
-        itinerary={itinerary}
-        savedTripId={savedTripId}
-        isSaving={isSaving}
-        saveStatus={saveStatus}
-        saveError={saveError}
-        onSave={onSave}
-        onUpdateItinerary={onUpdateItinerary}
-        onOverview={() => onPresentationModeChange('overview')}
-      />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <CanvasTabBar activeTab={activeTab} onSwitch={onSwitchTab} disabled={isLoading} />
+
+        {activeTab === 'itinerary' && (
+          <ItineraryDashboard
+            itinerary={itinerary}
+            savedTripId={savedTripId}
+            isSaving={isSaving}
+            saveStatus={saveStatus}
+            saveError={saveError}
+            onSave={onSave}
+            onUpdateItinerary={onUpdateItinerary}
+            onOverview={() => onPresentationModeChange('overview')}
+          />
+        )}
+
+        {activeTab === 'hotels' && (
+          <HotelsPanel
+            canvas={hotelCanvas ?? { panelState: 'idle', data: null }}
+            tripDestination={destination}
+            checkIn={startDate}
+            checkOut={endDate}
+            guests={travelers}
+            isLoading={isLoading}
+            onChipClick={(text) => onSend(text, { tabContext: 'hotels' })}
+            onRetry={onRetryHotels}
+          />
+        )}
+
+        {activeTab === 'flights' && (
+          <FlightsPanel
+            canvas={flightCanvas ?? { panelState: 'idle', data: null }}
+            tripDestination={destination}
+            departureDate={startDate}
+            returnDate={endDate}
+            passengers={travelers}
+            isLoading={isLoading}
+            onChipClick={(text) => {
+              const iataMatch = text.match(/\(([A-Z]{3})\)/)
+              if (iataMatch) {
+                onFlightOriginSelect(iataMatch[1], text)
+              } else {
+                onSend(text, { tabContext: 'flights' })
+              }
+            }}
+            onRetry={onRetryFlights}
+          />
+        )}
+      </div>
     )
   }
 
