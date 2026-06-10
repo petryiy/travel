@@ -5,6 +5,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "MeetU",
   description: "Plan, save, share, and export thoughtful travel itineraries with MeetU.",
+  icons: {
+    icon: "/MeetU_Logo.jpg",
+  },
 };
 
 export default function RootLayout({

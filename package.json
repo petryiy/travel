@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate-gallery": "node --env-file=.env.local scripts/migrate-gallery.mjs"
+    "db:migrate-gallery": "node --env-file=.env.local scripts/migrate-gallery.mjs",
+    "db:fix-auth-ids": "dotenv -e .env.local -- npx tsx scripts/fix-auth-id-defaults.ts"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.2",
@@ -40,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }
