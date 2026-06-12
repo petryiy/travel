@@ -16,16 +16,25 @@ export interface Message {
   content: string
 }
 
+export type TravelMode = 'walk' | 'transit' | 'taxi' | 'rideshare' | 'train' | 'bus' | 'ferry' | 'flight' | 'other'
+
+export interface TravelOption {
+  mode: TravelMode
+  durationMinutes: number
+  description: string
+  routeName?: string
+  cost?: string
+  recommended?: boolean
+  source?: 'google' | 'ai'
+}
+
 export interface Activity {
   time: 'morning' | 'afternoon' | 'evening'
   startTime?: string
   endTime?: string
   durationMinutes?: number
-  travelFromPrevious?: {
-    mode: 'walk' | 'transit' | 'taxi' | 'rideshare' | 'train' | 'bus' | 'ferry' | 'flight' | 'other'
-    durationMinutes: number
-    description: string
-  } | null
+  travelFromPrevious?: TravelOption | null
+  travelOptions?: TravelOption[]
   isFixedTime?: boolean
   title: string
   description: string
