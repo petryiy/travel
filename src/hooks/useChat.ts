@@ -10,6 +10,7 @@ import type {
   GeminiResponse,
   SavedTrip,
   SavedTripSummary,
+  TravelOption,
 } from '@/types/travel'
 
 function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
@@ -27,6 +28,64 @@ function toSavedTripSummary(trip: SavedTrip): SavedTripSummary {
     createdAt: trip.createdAt,
     updatedAt: trip.updatedAt,
   }
+}
+
+interface RoutePoint {
+  lat: number
+  lng: number
+  name?: string
+}
+
+interface RouteSegment {
+  dayIdx: number
+  actIdx: number
+  date: string
+  departureTime?: string
+  origin: RoutePoint
+  destination: RoutePoint
+}
+
+interface RouteResult {
+  dayIdx: number
+  actIdx: number
+  origin?: RoutePoint
+  destination?: RoutePoint
+  options: TravelOption[]
+}
+
+function buildRouteSegments(source: Itinerary) {
+  const segments: RouteSegment[] = []
+
+  source.days.forEach((day, dayIdx) => {
+    day.activities.forEach((activity, actIdx) => {
+      if (actIdx === 0) return
+      const previous = day.activities[actIdx - 1]
+      if (!previous.coordinates || !activity.coordinates) return
+
+      segments.push({
+        dayIdx,
+        actIdx,
+        date: day.date,
+        departureTime: previous.endTime ?? activity.startTime,
+        origin: { ...previous.coordinates, name: previous.location },
+        destination: { ...activity.coordinates, name: activity.location },
+      })
+    })
+  })
+
+  return segments
+}
+
+function closePoint(a?: RoutePoint, b?: { lat: number; lng: number }) {
+  if (!a || !b) return false
+  return Math.abs(a.lat - b.lat) < 0.0005 && Math.abs(a.lng - b.lng) < 0.0005
+}
+
+function needsRouteEnrichment(source: Itinerary) {
+  return buildRouteSegments(source).some((segment) => {
+    const activity = source.days[segment.dayIdx]?.activities[segment.actIdx]
+    return !activity?.travelOptions?.some((option) => option.source === 'google')
+  })
 }
 
 export function useChat(userId: string | null) {
@@ -115,6 +174,49 @@ export function useChat(userId: string | null) {
     }
   }, [])
 
+  const enrichRoutes = useCallback(async (newItinerary: Itinerary) => {
+    const segments = buildRouteSegments(newItinerary).filter((segment) => {
+      const activity = newItinerary.days[segment.dayIdx]?.activities[segment.actIdx]
+      return !activity?.travelOptions?.some((option) => option.source === 'google')
+    })
+    if (segments.length === 0) return
+
+    try {
+      const res = await fetch('/api/routes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segments }),
+      })
+      const data: { results?: RouteResult[] } = await res.json()
+      const results = data.results ?? []
+      if (results.length === 0) return
+
+      setItinerary((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          days: prev.days.map((day, di) => ({
+            ...day,
+            activities: day.activities.map((act, ai) => {
+              const result = results.find((r) => r.dayIdx === di && r.actIdx === ai)
+              const previous = day.activities[ai - 1]
+              if (!result?.options.length || !previous?.coordinates || !act.coordinates) return act
+              if (!closePoint(result.origin, previous.coordinates) || !closePoint(result.destination, act.coordinates)) return act
+
+              return {
+                ...act,
+                travelFromPrevious: result.options[0] ?? act.travelFromPrevious,
+                travelOptions: result.options,
+              }
+            }),
+          })),
+        }
+      })
+    } catch {
+      // route enrichment is non-critical; keep the AI-estimated travel data
+    }
+  }, [])
+
   const callGemini = useCallback(async (
     nextMessages: Message[],
     details?: TripDetails,
@@ -146,6 +248,7 @@ export function useChat(userId: string | null) {
         setClarification(null)
         setCanvasState('itinerary')
         void checkHours(data.canvas.itinerary)
+        void enrichRoutes(data.canvas.itinerary)
       } else {
         setCanvasState((prev) => (prev === 'loading' ? 'clarification' : prev))
       }
@@ -156,7 +259,7 @@ export function useChat(userId: string | null) {
     } finally {
       setIsLoading(false)
     }
-  }, [checkHours])
+  }, [checkHours, enrichRoutes])
 
   const submitSetup = useCallback(async (details: TripDetails) => {
     setTripDetails(details)
@@ -253,13 +356,14 @@ export function useChat(userId: string | null) {
       setClarification(null)
       setCanvasState('itinerary')
       setSaveStatus('Loaded saved trip')
+      if (needsRouteEnrichment(data.trip.itinerary)) void enrichRoutes(data.trip.itinerary)
     } catch {
       setSaveError('Could not open this saved trip.')
       setCanvasState('setup')
     } finally {
       setIsLoadingTrips(false)
     }
-  }, [])
+  }, [enrichRoutes])
 
   const updateItinerary = useCallback((newItinerary: Itinerary) => {
     setItinerary(newItinerary)

@@ -32,7 +32,10 @@ Response schema:
               "startTime": "09:30",
               "endTime": "11:00",
               "durationMinutes": 90,
-              "travelFromPrevious": { "mode": "transit|walk|taxi|rideshare|train|bus|ferry|flight|other", "durationMinutes": 25, "description": "25 min by metro from the previous stop" } | null,
+              "travelFromPrevious": { "mode": "transit|walk|taxi|rideshare|train|bus|ferry|flight|other", "durationMinutes": 25, "description": "25 min by metro from the previous stop", "routeName": "T4 / Bus 333 / L2", "cost": "Approx. $4", "recommended": true } | null,
+              "travelOptions": [
+                { "mode": "transit|walk|taxi|rideshare|train|bus|ferry|flight|other", "durationMinutes": 25, "description": "Take L2 light rail to Circular Quay, then walk 6 min", "routeName": "L2 + walk", "cost": "Approx. $4", "recommended": true }
+              ] | null,
               "isFixedTime": false,
               "title": "Activity name",
               "description": "What to do and why it's great",
@@ -71,6 +74,7 @@ Rules:
 - Choose activities and durations based on real-world visit length, opening hours, transit, meals, and the user's travel style.
 - If a stop is short, schedule it as short and continue with the next sensible part of the day instead of stretching it.
 - Include travelFromPrevious for every activity after the first meaningful stop of the day.
+- Also include travelOptions for every activity after the first meaningful stop of the day: 1-3 practical ways to get there, ordered by recommendation. Prefer walk/public transport when sensible, do not default to taxi, and include known route names or line numbers such as L2, T4, bus 333, ferry F1 when you can do so confidently. Set travelFromPrevious equal to the best recommended option.
 - Avoid impossible overlaps. Leave small buffers for meals, queues, check-in, and transit.
 - If the user mentions a booking, reservation, ticket, flight, train, meeting, or "I have an activity at 14:00", mark that activity isFixedTime = true and rearrange the rest of that day around it.
 - Keep keyLocations aligned with the itinerary activities so the map can show each day's places.

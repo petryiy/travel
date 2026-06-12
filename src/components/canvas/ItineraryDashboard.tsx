@@ -20,15 +20,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Activity, DayPlan, Itinerary } from '@/types/travel'
+import type { Activity, DayPlan, Itinerary, TravelOption } from '@/types/travel'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { MapView } from './MapView'
-
-const TIME_ICONS: Record<Activity['time'], string> = {
-  morning: '🌅',
-  afternoon: '☀️',
-  evening: '🌙',
-}
 
 const TYPE_COLORS: Record<Activity['type'], string> = {
   food: 'bg-[#f8dfad] text-[#765320] border-[#e9c98f]',
@@ -52,6 +46,46 @@ function formatMinutes(minutes: number) {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
   return rest ? `${hours}h ${rest}m` : `${hours}h`
+}
+
+const MODE_LABELS: Record<TravelOption['mode'], string> = {
+  walk: 'Walk',
+  transit: 'Transit',
+  taxi: 'Taxi',
+  rideshare: 'Rideshare',
+  train: 'Train',
+  bus: 'Bus',
+  ferry: 'Ferry',
+  flight: 'Flight',
+  other: 'Route',
+}
+
+const MODE_BADGES: Record<TravelOption['mode'], string> = {
+  walk: 'W',
+  transit: 'PT',
+  taxi: 'TX',
+  rideshare: 'RS',
+  train: 'TR',
+  bus: 'BU',
+  ferry: 'FY',
+  flight: 'FL',
+  other: 'GO',
+}
+
+function travelOptionsForActivity(activity: Activity): TravelOption[] {
+  const options = Array.isArray(activity.travelOptions)
+    ? activity.travelOptions.filter((option) => option && option.durationMinutes != null && option.description)
+    : []
+
+  if (options.length > 0) return options.slice(0, 3)
+  return activity.travelFromPrevious ? [{ ...activity.travelFromPrevious, recommended: true }] : []
+}
+
+function hoursSourceLabel(source?: Activity['hoursSource']) {
+  if (source === 'google') return 'Google Places'
+  if (source === 'osm') return 'OpenStreetMap'
+  if (source === 'gemini') return 'MeetU estimate'
+  return 'Not verified yet'
 }
 
 // ── Immutable update helpers ──────────────────────────────────────────────────
@@ -133,6 +167,8 @@ interface ActivityCardProps {
   onEditValueChange: (v: string) => void
   onDelete: () => void
   onMoveToDay: (toDayIdx: number) => void
+  isSelected?: boolean
+  onSelect?: () => void
 }
 
 function ActivityCard({
@@ -149,9 +185,12 @@ function ActivityCard({
   onEditValueChange,
   onDelete,
   onMoveToDay,
+  isSelected = false,
+  onSelect,
 }: ActivityCardProps) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
   const [showMoveMenu, setShowMoveMenu] = useState(false)
+  const primaryTravelOption = travelOptionsForActivity(act)[0]
 
   const eid = (field: string) => `act:${dayIdx}:${actIdx}:${field}`
 
@@ -189,38 +228,13 @@ function ActivityCard({
     )
   }
 
-  function EditableArea({ field, value, rows = 3, textareaCls }: { field: string; value: string; rows?: number; textareaCls?: string }) {
-    const id = eid(field)
-    if (editingId === id) {
-      return (
-        <textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-          autoFocus
-          value={editingValue}
-          rows={rows}
-          onChange={(e) => onEditValueChange(e.target.value)}
-          onBlur={() => onEditCommit(id, editingValue)}
-          onKeyDown={(e) => handleKeyDown(e, id, true)}
-          className={textareaCls ?? 'w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-1 text-inherit leading-6 outline-none ring-1 ring-[#5f7d59]/40 resize-none'}
-        />
-      )
-    }
-    return (
-      <span
-        role="button" tabIndex={0}
-        onClick={() => onEditStart(id, value)}
-        onKeyDown={(e) => e.key === 'Enter' && onEditStart(id, value)}
-        className="group/edit inline-flex cursor-text items-start gap-1"
-        title="Click to edit"
-      >
-        <span>{value}</span>
-        <span className="mt-0.5 shrink-0 opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
-      </span>
-    )
-  }
-
   return (
-    <div className={`group/card relative min-w-0 flex-1 rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-4 shadow-sm transition ${isDragging ? 'opacity-40' : 'hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(75,58,36,0.1)]'}`}>
+    <div
+      onClick={onSelect}
+      className={`group/card relative min-w-0 flex-1 rounded-2xl border bg-[#fffaf1] p-3 shadow-sm transition ${
+        isSelected ? 'border-[#5f7d59] ring-2 ring-[#5f7d59]/15' : 'border-[#dfd4c5]'
+      } ${isDragging ? 'opacity-40' : 'hover:border-[#cdbca4] hover:bg-white hover:shadow-[0_12px_28px_rgba(75,58,36,0.08)]'}`}
+    >
       {/* Action buttons — visible on hover */}
       <div className="absolute right-3 top-3 flex items-center gap-1 opacity-0 transition group-hover/card:opacity-100">
         {totalDays > 1 && (
@@ -275,15 +289,11 @@ function ActivityCard({
         </button>
       </div>
 
-      {act.travelFromPrevious && (
-        <p className="mb-3 inline-flex rounded-full bg-[#f0e4d4] px-3 py-1 text-[11px] font-semibold text-[#75624c]">
-          {act.travelFromPrevious.durationMinutes} min {act.travelFromPrevious.mode}: {act.travelFromPrevious.description}
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-base">{TIME_ICONS[act.time]}</span>
-        <span className="text-xs font-semibold capitalize text-[#a69682]">{act.time}</span>
+      <div className="flex flex-wrap items-center gap-2 pr-16">
+        <span className="rounded-full bg-[#f0e4d4] px-2.5 py-1 text-[11px] font-bold text-[#66523b]">
+          {act.startTime ?? act.time}{act.endTime ? `–${act.endTime}` : ''}
+        </span>
+        {act.durationMinutes != null && <span className="text-[11px] font-medium text-[#a69682]">{act.durationMinutes} min</span>}
         {act.isFixedTime && (
           <span className="rounded-full bg-[#fff0c2] px-2.5 py-1 text-[11px] font-semibold text-[#8a641f]">fixed time</span>
         )}
@@ -311,16 +321,15 @@ function ActivityCard({
         )}
       </div>
 
-      <div className="mt-3 text-base font-bold text-[#2f2419]">
+      <div className="mt-2 text-sm font-bold text-[#2f2419]">
         <EditableText
           field="title"
           value={act.title}
-          inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-base font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+          inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
         />
       </div>
 
-      <p className="mt-1 text-xs font-medium text-[#8a7965]">
-        Pin:{' '}
+      <p className="mt-1 truncate text-xs font-medium text-[#8a7965]">
         <EditableText
           field="loc"
           value={act.location}
@@ -328,14 +337,11 @@ function ActivityCard({
         />
       </p>
 
-      <div className="mt-3 text-sm leading-6 text-[#5f4c36]">
-        <EditableArea
-          field="desc"
-          value={act.description}
-          rows={3}
-          textareaCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-1 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40 resize-none"
-        />
-      </div>
+      {primaryTravelOption && (
+        <p className="mt-2 truncate rounded-xl bg-[#f7f1e9] px-2.5 py-1.5 text-[11px] font-medium text-[#75624c]">
+          {primaryTravelOption.durationMinutes} min {MODE_LABELS[primaryTravelOption.mode]} · {primaryTravelOption.routeName ? `${primaryTravelOption.routeName}: ` : ''}{primaryTravelOption.description}
+        </p>
+      )}
 
       {act.hoursWarning && (
         <div
@@ -487,6 +493,7 @@ function SortableActivityRow(props: SortableActivityRowProps) {
 
 interface Props {
   itinerary: Itinerary
+  savedTripTitle: string | null
   savedTripId: string | null
   isSaving: boolean
   saveStatus: string | null
@@ -494,13 +501,16 @@ interface Props {
   onSave: () => void
   onUpdateItinerary?: (itinerary: Itinerary) => void
   onOverview?: () => void
+  onBackToDashboard?: () => void
 }
 
-export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatus, saveError, onSave, onUpdateItinerary, onOverview }: Props) {
+export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isSaving, saveStatus, saveError, onSave, onUpdateItinerary, onOverview, onBackToDashboard }: Props) {
   const [activeDay, setActiveDay] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [contextTab, setContextTab] = useState<'map' | 'details' | 'notes'>('map')
+  const [selectedActivityIndex, setSelectedActivityIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
 
   const safeActiveDay = Math.min(activeDay, Math.max(itinerary.days.length - 1, 0))
@@ -510,9 +520,13 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
   const mapLocations = dayLocations.length > 0 ? dayLocations : activeKeyLocations.length > 0 ? activeKeyLocations : itinerary.keyLocations
   const mapCenter = getLocationCenter(mapLocations, itinerary.mapCenter)
   const currentDayWindow = dayWindow(day?.startTime ?? itinerary.trip.dailyStartTime, day?.endTime ?? itinerary.trip.dailyEndTime)
-  const dayTravelMinutes = day?.activities.reduce((t, a) => t + (a.travelFromPrevious?.durationMinutes ?? 0), 0) ?? 0
+  const dayTravelMinutes = day?.activities.reduce((t, a) => t + (travelOptionsForActivity(a)[0]?.durationMinutes ?? 0), 0) ?? 0
   const days = itinerary.days.length
   const travelers = itinerary.trip.travelers
+  const selectedActivityIdx = Math.min(selectedActivityIndex, Math.max((day?.activities.length ?? 1) - 1, 0))
+  const selectedActivity = day?.activities[selectedActivityIdx] ?? null
+  const selectedTravelOptions = selectedActivity ? travelOptionsForActivity(selectedActivity) : []
+  const displayTitle = savedTripTitle?.trim() || itinerary.trip.destination
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const activityIds = day?.activities.map((_, i) => `act:${safeActiveDay}:${i}`) ?? []
@@ -607,6 +621,37 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
     )
   }
 
+  function InlineArea({ id, value, rows = 4, cls, textareaCls, placeholder }: { id: string; value: string; rows?: number; cls?: string; textareaCls?: string; placeholder?: string }) {
+    if (editingId === id) {
+      return (
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          autoFocus
+          value={editingValue}
+          rows={rows}
+          placeholder={placeholder}
+          onChange={(e) => setEditingValue(e.target.value)}
+          onBlur={() => commitEdit(id, editingValue)}
+          onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); cancelEdit() } }}
+          className={textareaCls ?? 'w-full resize-none rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40'}
+        />
+      )
+    }
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => startEdit(id, value)}
+        onKeyDown={(e) => e.key === 'Enter' && startEdit(id, value)}
+        className={`group/edit inline-flex cursor-text items-start gap-1 ${cls ?? ''}`}
+        title="Click to edit"
+      >
+        <span>{value || <span className="italic text-[#b7a791]">{placeholder ?? 'Add details'}</span>}</span>
+        <span className="mt-0.5 shrink-0 opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+      </span>
+    )
+  }
+
   function SummaryArea() {
     if (editingId === 'summary') {
       return (
@@ -637,63 +682,67 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f4efe7] text-[#3e3021]">
 
-      {/* ── Cut 1: Compact header ── */}
-      <div className="shrink-0 border-b border-[#dfd4c5] bg-[#fbf7ef] px-3 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset] sm:px-4">
-        {/* Row 1: title + actions */}
-        <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 py-2 sm:gap-4 sm:py-0">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-[#6f8a68] sm:inline">Editing workspace</span>
-            <span className="hidden text-[#d8c9b5] sm:inline">·</span>
-            <h2 className="truncate text-base font-bold text-[#2f2419]">{itinerary.trip.destination}</h2>
+      <div className="shrink-0 border-b border-[#dfd4c5] bg-[#fbf7ef] px-3 py-3 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset] sm:px-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-bold text-[#2f2419]">{displayTitle}</h1>
+            <div className="mt-1 flex items-center gap-2 overflow-x-auto text-[11px] font-medium text-[#8a7965]">
+              <span className="shrink-0">{itinerary.trip.startDate} – {itinerary.trip.endDate}</span>
+              <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+              <span className="shrink-0">{days} {days === 1 ? 'day' : 'days'}</span>
+              <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+              <span className="shrink-0">{travelers} {travelers === 1 ? 'traveler' : 'travelers'}</span>
+              {itinerary.trip.accommodationLocation && (
+                <>
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+                  <span className="shrink-0">Staying near {itinerary.trip.accommodationLocation}</span>
+                </>
+              )}
+              {(itinerary.trip.dailyStartTime || itinerary.trip.dailyEndTime) && (
+                <>
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+                  <span className="shrink-0">
+                    {itinerary.trip.dailyStartTime ?? '09:00'}–{itinerary.trip.dailyEndTime ?? '21:00'}
+                  </span>
+                </>
+              )}
+              {(saveStatus || saveError) && (
+                <>
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
+                  <span className={`shrink-0 ${saveError ? 'text-rose-600' : 'text-[#4f7b4d]'}`}>{saveError ?? saveStatus}</span>
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {(saveStatus || saveError) && (
-              <span className={`hidden text-[11px] font-medium sm:inline ${saveError ? 'text-rose-600' : 'text-[#4f7b4d]'}`}>
-                {saveError ?? saveStatus}
-              </span>
+          <div className="flex shrink-0 items-center gap-2">
+            {onBackToDashboard && (
+              <button
+                type="button"
+                onClick={onBackToDashboard}
+                className="rounded-full border border-[#d1c0aa] bg-[#fffaf1] px-3.5 py-2 text-xs font-semibold text-[#5c4630] transition hover:border-[#bca98d] hover:bg-white"
+              >
+                Dashboard
+              </button>
             )}
             {savedTripId && onOverview && (
               <button
-                type="button" onClick={onOverview}
-                className="rounded-full border border-[#d1c0aa] bg-[#fffaf1] px-3 py-1.5 text-[11px] font-semibold text-[#5c4630] transition hover:border-[#bca98d] hover:bg-white"
+                type="button"
+                onClick={onOverview}
+                className="rounded-full border border-[#d1c0aa] bg-[#fffaf1] px-3.5 py-2 text-xs font-semibold text-[#5c4630] transition hover:border-[#bca98d] hover:bg-white"
               >
-                Overview
+                Preview
               </button>
             )}
             <button
-              type="button" onClick={onSave} disabled={isSaving}
-              className="rounded-full bg-[#5f7d59] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-50"
+              type="button"
+              onClick={onSave}
+              disabled={isSaving}
+              className="rounded-full bg-[#5f7d59] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-50"
             >
               {isSaving ? 'Saving…' : savedTripId ? 'Save changes' : 'Save trip'}
             </button>
           </div>
         </div>
-        {/* Row 2: inline meta chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 text-[11px] text-[#8a7965]">
-          <span className="shrink-0">{itinerary.trip.startDate} – {itinerary.trip.endDate}</span>
-          <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
-          <span className="shrink-0">{days} {days === 1 ? 'day' : 'days'}</span>
-          <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
-          <span className="shrink-0">{travelers} {travelers === 1 ? 'traveler' : 'travelers'}</span>
-          {itinerary.trip.accommodationLocation && (
-            <>
-              <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
-              <span className="shrink-0">Staying near {itinerary.trip.accommodationLocation}</span>
-            </>
-          )}
-          {(itinerary.trip.dailyStartTime || itinerary.trip.dailyEndTime) && (
-            <>
-              <span className="h-1 w-1 shrink-0 rounded-full bg-[#c8b89e]" />
-              <span className="shrink-0">
-                {itinerary.trip.dailyStartTime ?? '09:00'}–{itinerary.trip.dailyEndTime ?? '21:00'}
-              </span>
-            </>
-          )}
-        </div>
-        {/* Row 3: trip summary */}
-        {itinerary.summary && (
-          <p className="pb-2 text-[11px] leading-5 text-[#75624c]">{itinerary.summary}</p>
-        )}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
@@ -703,7 +752,11 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             {itinerary.days.map((d, i) => (
               <button
                 key={i}
-                onClick={() => setActiveDay(i)}
+                onClick={() => {
+                  setActiveDay(i)
+                  setSelectedActivityIndex(0)
+                  setContextTab('map')
+                }}
                 className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
                   safeActiveDay === i
                     ? 'border-[#5f7d59] bg-[#5f7d59] text-white'
@@ -715,7 +768,7 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
             ))}
           </div>
 
-          {/* Scrollable content: day strip + activities + summary + notes */}
+          {/* Scrollable content: day strip + activities */}
           <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
             {day && (
               <>
@@ -754,6 +807,11 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                           totalActivities={day.activities.length}
                           onDelete={() => onUpdateItinerary?.(removeActivity(itinerary, safeActiveDay, i))}
                           onMoveToDay={(toDayIdx) => onUpdateItinerary?.(moveActivityToDay(itinerary, safeActiveDay, i, toDayIdx))}
+                          isSelected={i === selectedActivityIdx}
+                          onSelect={() => {
+                            setSelectedActivityIndex(i)
+                            setContextTab('details')
+                          }}
                           {...commonCardProps}
                         />
                       ))}
@@ -770,107 +828,279 @@ export function ItineraryDashboard({ itinerary, savedTripId, isSaving, saveStatu
                   </DragOverlay>
                 </DndContext>
 
-                {/* ── Cut 3: Summary + planning notes scroll with activities ── */}
-                <details className="mt-5 rounded-2xl border border-[#dfd4c5] bg-[#fffaf1]">
-                  <summary className="flex cursor-pointer select-none list-none items-center justify-between px-4 py-2.5 text-xs font-bold uppercase tracking-[0.14em] text-[#6f8a68] hover:bg-[#f7f2ea]">
-                    <span>Trip summary &amp; notes</span>
-                    <span className="text-[10px] text-[#b7a791]">click to expand</span>
-                  </summary>
-                  <div className="border-t border-[#e8ddd0] px-4 py-3">
-                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Summary</p>
-                    <SummaryArea />
-
-                    {(itinerary.tips.length > 0 || onUpdateItinerary) && (
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center gap-3">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Planning notes</p>
-                          {onUpdateItinerary && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = appendTip(itinerary)
-                                onUpdateItinerary(updated)
-                                startEdit(`tip:${updated.tips.length - 1}`, '')
-                              }}
-                              className="text-[11px] font-semibold text-[#6f8a68] transition hover:text-[#5f7d59]"
-                            >
-                              + Add note
-                            </button>
-                          )}
-                        </div>
-                        <ul className="space-y-1.5">
-                          {itinerary.tips.map((tip, i) => (
-                            <li key={i} className="group/tip flex items-start gap-2 text-xs leading-5 text-[#75624c]">
-                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8ba27e]" />
-                              {editingId === `tip:${i}` ? (
-                                <input
-                                  ref={inputRef as React.RefObject<HTMLInputElement>}
-                                  autoFocus value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
-                                  onBlur={() => commitEdit(`tip:${i}`, editingValue)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
-                                    if (e.key === 'Enter') { e.preventDefault(); commitEdit(`tip:${i}`, editingValue) }
-                                  }}
-                                  className="flex-1 rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-xs text-[#75624c] outline-none ring-1 ring-[#5f7d59]/40"
-                                />
-                              ) : (
-                                <span
-                                  role="button" tabIndex={0}
-                                  onClick={() => startEdit(`tip:${i}`, tip)}
-                                  onKeyDown={(e) => e.key === 'Enter' && startEdit(`tip:${i}`, tip)}
-                                  className="group/edit flex-1 cursor-text"
-                                  title="Click to edit"
-                                >
-                                  {tip || <span className="italic text-[#b7a791]">empty note</span>}
-                                  <span className="ml-1 opacity-0 text-[9px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
-                                </span>
-                              )}
-                              {onUpdateItinerary && (
-                                <button
-                                  type="button"
-                                  onClick={() => onUpdateItinerary(removeTip(itinerary, i))}
-                                  className="mt-0.5 shrink-0 text-[#c4b09a] opacity-0 transition hover:text-rose-500 group-hover/tip:opacity-100"
-                                  title="Remove note"
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </details>
                 <div className="h-4" />
               </>
             )}
           </div>
         </section>
 
-        {/* Map sidebar */}
-        <aside className="flex min-h-[420px] w-full flex-col gap-3 p-3 sm:p-4 lg:min-h-0 lg:min-w-[320px] lg:flex-1">
-          <div className="flex min-h-[340px] flex-1 flex-col rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-3 shadow-[0_18px_40px_rgba(75,58,36,0.08)] lg:min-h-0">
-            <div className="mb-2 flex items-center justify-between gap-2">
+        <aside className="flex min-h-[460px] w-full flex-col p-3 sm:p-4 lg:min-h-0 lg:min-w-[360px] lg:flex-1">
+          <div className="flex min-h-0 flex-1 flex-col rounded-[24px] border border-[#dfd4c5] bg-[#fffaf1] p-3 shadow-[0_18px_40px_rgba(75,58,36,0.08)]">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Working map</p>
-                <h3 className="mt-0.5 text-sm font-bold text-[#2f2419]">Day {day?.day ?? 1} route</h3>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Context panel</p>
+                <h3 className="mt-0.5 text-sm font-bold text-[#2f2419]">Day {day?.day ?? 1}</h3>
               </div>
-              <div className="rounded-xl bg-[#f0e4d4] px-2.5 py-1.5 text-right text-[11px] font-semibold text-[#66523b]">
-                <p>{mapLocations.length} pins · {formatMinutes(dayTravelMinutes)}</p>
+              <div className="inline-flex rounded-full border border-[#dfd4c5] bg-[#f7f1e9] p-1">
+                {(['map', 'details', 'notes'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setContextTab(tab)}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold capitalize transition ${
+                      contextTab === tab
+                        ? 'bg-[#5f7d59] text-white shadow-sm'
+                        : 'text-[#75624c] hover:bg-white'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="min-h-[280px] flex-1 overflow-hidden rounded-[18px] border border-[#d1c0aa] bg-[#e9e1d4] lg:min-h-0">
-              <MapView center={mapCenter} locations={mapLocations} activeDay={day?.day} />
-            </div>
-          </div>
 
-          <div className="shrink-0 rounded-[20px] border border-[#dfd4c5] bg-[#fbf7ef] px-4 py-3 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Studio focus</p>
-            <p className="mt-1.5 text-xs leading-5 text-[#66523b]">
-              Drag <span className="font-semibold">⠿</span> to reorder · <span className="font-semibold">→D</span> to move between days · click any text to edit
-            </p>
+            {contextTab === 'map' && (
+              <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <div className="min-h-[300px] flex-1 overflow-hidden rounded-[18px] border border-[#d1c0aa] bg-[#e9e1d4] lg:min-h-0">
+                  <MapView center={mapCenter} locations={mapLocations} activeDay={day?.day} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl border border-[#e4d8c9] bg-[#fbf7ef] px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Pins</p>
+                    <p className="mt-1 text-sm font-bold text-[#2f2419]">{mapLocations.length}</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#e4d8c9] bg-[#fbf7ef] px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Travel</p>
+                    <p className="mt-1 text-sm font-bold text-[#2f2419]">{formatMinutes(dayTravelMinutes)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#e4d8c9] bg-[#fbf7ef] px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Stops</p>
+                    <p className="mt-1 text-sm font-bold text-[#2f2419]">{day?.activities.length ?? 0}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {contextTab === 'details' && (
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] px-4 py-4">
+                {selectedActivity ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Selected stop</p>
+                      <h3 className="mt-1 text-lg font-bold text-[#2f2419]">
+                        <InlineText
+                          id={`act:${safeActiveDay}:${selectedActivityIdx}:title`}
+                          value={selectedActivity.title}
+                          inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-lg font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Start</p>
+                        <p className="mt-1 text-sm font-bold text-[#2f2419]">
+                          <InlineText
+                            id={`act:${safeActiveDay}:${selectedActivityIdx}:startTime`}
+                            value={selectedActivity.startTime ?? ''}
+                            inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">End</p>
+                        <p className="mt-1 text-sm font-bold text-[#2f2419]">
+                          <InlineText
+                            id={`act:${safeActiveDay}:${selectedActivityIdx}:endTime`}
+                            value={selectedActivity.endTime ?? ''}
+                            inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Stay</p>
+                        <p className="mt-1 text-sm font-bold text-[#2f2419]">
+                          <InlineText
+                            id={`act:${safeActiveDay}:${selectedActivityIdx}:dur`}
+                            value={String(selectedActivity.durationMinutes ?? '')}
+                            inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                          /> min
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
+                      <span className={`rounded-full border px-3 py-1.5 capitalize ${TYPE_COLORS[selectedActivity.type]}`}>
+                        {selectedActivity.type}
+                      </span>
+                      {selectedActivity.isFixedTime && (
+                        <span className="rounded-full bg-[#fff0c2] px-3 py-1.5 text-[#8a641f]">fixed time</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Location</p>
+                      <p className="text-sm font-semibold text-[#5f4c36]">
+                        <InlineText
+                          id={`act:${safeActiveDay}:${selectedActivityIdx}:loc`}
+                          value={selectedActivity.location}
+                          inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Description</p>
+                      <InlineArea
+                        id={`act:${safeActiveDay}:${selectedActivityIdx}:desc`}
+                        value={selectedActivity.description}
+                        placeholder="Add a useful note for this stop"
+                        cls="text-sm leading-6 text-[#5f4c36]"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Route options</p>
+                        {selectedTravelOptions.length > 0 && (
+                          <span className="text-[10px] font-bold text-[#8a7965]">
+                            {selectedTravelOptions.some((option) => option.source === 'google') ? 'Google routes' : `Top ${selectedTravelOptions.length}`}
+                          </span>
+                        )}
+                      </div>
+                      {selectedTravelOptions.length > 0 ? (
+                        <div className="mt-2 space-y-2">
+                          {selectedTravelOptions.map((option, optionIdx) => (
+                            <div key={`${option.mode}-${optionIdx}`} className="flex gap-3 rounded-2xl border border-[#eadfce] bg-[#fbf7ef] px-3 py-2">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e1eadb] text-[10px] font-black text-[#526931]">
+                                {MODE_BADGES[option.mode]}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <p className="text-sm font-bold text-[#2f2419]">
+                                    {option.durationMinutes} min · {option.routeName ?? MODE_LABELS[option.mode]}
+                                  </p>
+                                  {(option.recommended || optionIdx === 0) && (
+                                    <span className="rounded-full bg-[#5f7d59] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">Best</span>
+                                  )}
+                                  {option.cost && <span className="text-[11px] font-semibold text-[#8a7965]">{option.cost}</span>}
+                                </div>
+                                <p className="mt-0.5 text-xs leading-5 text-[#66523b]">{option.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs leading-5 text-[#8a7965]">
+                          No route is needed for the first stop of the day.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className={`rounded-2xl border px-3 py-3 ${
+                      selectedActivity.hoursWarning
+                        ? 'border-amber-200 bg-amber-50 text-amber-800'
+                        : 'border-[#e4d8c9] bg-[#fffaf1] text-[#5f4c36]'
+                    }`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Hours</p>
+                        <span className="text-[10px] font-bold text-[#8a7965]">{hoursSourceLabel(selectedActivity.hoursSource)}</span>
+                      </div>
+                      <p className="mt-1 text-sm leading-6">
+                        {selectedActivity.hoursWarning ?? selectedActivity.hoursNote ?? 'No verified opening hours yet.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-[220px] items-center justify-center text-center text-sm text-[#8a7965]">
+                    Select a stop to edit its details.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {contextTab === 'notes' && (
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] px-4 py-4">
+                <div>
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Trip summary</p>
+                  <SummaryArea />
+                </div>
+
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center gap-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Planning notes</p>
+                    {onUpdateItinerary && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = appendTip(itinerary)
+                          onUpdateItinerary(updated)
+                          startEdit(`tip:${updated.tips.length - 1}`, '')
+                        }}
+                        className="text-[11px] font-semibold text-[#6f8a68] transition hover:text-[#5f7d59]"
+                      >
+                        + Add note
+                      </button>
+                    )}
+                  </div>
+                  <ul className="space-y-2">
+                    {itinerary.tips.map((tip, i) => (
+                      <li key={i} className="group/tip flex items-start gap-2 rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2 text-xs leading-5 text-[#75624c]">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8ba27e]" />
+                        {editingId === `tip:${i}` ? (
+                          <input
+                            ref={inputRef as React.RefObject<HTMLInputElement>}
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => commitEdit(`tip:${i}`, editingValue)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
+                              if (e.key === 'Enter') { e.preventDefault(); commitEdit(`tip:${i}`, editingValue) }
+                            }}
+                            className="flex-1 rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-0.5 text-xs text-[#75624c] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        ) : (
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => startEdit(`tip:${i}`, tip)}
+                            onKeyDown={(e) => e.key === 'Enter' && startEdit(`tip:${i}`, tip)}
+                            className="group/edit flex-1 cursor-text"
+                            title="Click to edit"
+                          >
+                            {tip || <span className="italic text-[#b7a791]">empty note</span>}
+                            <span className="ml-1 opacity-0 text-[9px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                          </span>
+                        )}
+                        {onUpdateItinerary && (
+                          <button
+                            type="button"
+                            onClick={() => onUpdateItinerary(removeTip(itinerary, i))}
+                            className="mt-0.5 shrink-0 text-[#c4b09a] opacity-0 transition hover:text-rose-500 group-hover/tip:opacity-100"
+                            title="Remove note"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                    {itinerary.tips.length === 0 && (
+                      <li className="rounded-2xl border border-dashed border-[#d8c9b5] px-3 py-4 text-center text-xs text-[#9a876f]">
+                        No notes yet.
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Quick guide</p>
+                  <p className="mt-1.5 text-xs leading-5 text-[#66523b]">
+                    Drag <span className="font-semibold">⠿</span> to reorder, use <span className="font-semibold">→D</span> to move stops between days, and click text to edit.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </aside>
       </div>

@@ -130,6 +130,7 @@ export function CanvasPanel({
     return (
       <ItineraryDashboard
         itinerary={itinerary}
+        savedTripTitle={savedTripTitle}
         savedTripId={savedTripId}
         isSaving={isSaving}
         saveStatus={saveStatus}
@@ -137,6 +138,7 @@ export function CanvasPanel({
         onSave={onSave}
         onUpdateItinerary={onUpdateItinerary}
         onOverview={() => onPresentationModeChange('overview')}
+        onBackToDashboard={onBackToDashboard}
       />
     )
   }
