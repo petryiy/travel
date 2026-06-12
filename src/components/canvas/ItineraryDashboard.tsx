@@ -246,6 +246,57 @@ function patchActivityAndShiftFollowing(it: Itinerary, dayIdx: number, actIdx: n
   }
 }
 
+function rescheduleActivitiesFromIndex(activities: Activity[], startIdx: number): Activity[] {
+  let timelineCursor: number | null = null
+
+  return activities.map((activity, idx) => {
+    if (idx < startIdx) {
+      timelineCursor = parseClockTime(activity.endTime) ?? timelineCursor
+      return activity
+    }
+
+    if (idx === 0 || activity.isFixedTime) {
+      timelineCursor = parseClockTime(activity.endTime) ?? timelineCursor
+      return activity
+    }
+
+    const travelMinutes = travelOptionsForActivity(activity)[0]?.durationMinutes ?? 0
+    const originalStart = parseClockTime(activity.startTime)
+    const originalEnd = parseClockTime(activity.endTime)
+    const durationMinutes = activity.durationMinutes ?? diffClockMinutes(activity.startTime, activity.endTime)
+
+    if (timelineCursor == null || durationMinutes == null || durationMinutes <= 0) {
+      timelineCursor = originalEnd ?? timelineCursor
+      return activity
+    }
+
+    const nextStart = timelineCursor + travelMinutes
+    const nextEnd = nextStart + durationMinutes
+    timelineCursor = nextEnd
+
+    if (originalStart === nextStart && originalEnd === nextEnd) return activity
+    return {
+      ...activity,
+      startTime: formatClockTime(nextStart),
+      endTime: formatClockTime(nextEnd),
+    }
+  })
+}
+
+function reorderActivitiesAndReschedule(it: Itinerary, dayIdx: number, oldIdx: number, newIdx: number): Itinerary {
+  return {
+    ...it,
+    days: it.days.map((d, di) => {
+      if (di !== dayIdx) return d
+      const reordered = arrayMove(d.activities, oldIdx, newIdx)
+      return {
+        ...d,
+        activities: rescheduleActivitiesFromIndex(reordered, Math.min(oldIdx, newIdx)),
+      }
+    }),
+  }
+}
+
 function patchDay(it: Itinerary, dayIdx: number, patch: Partial<DayPlan>): Itinerary {
   return { ...it, days: it.days.map((d, di) => di !== dayIdx ? d : { ...d, ...patch }) }
 }
@@ -255,15 +306,6 @@ function removeActivity(it: Itinerary, dayIdx: number, actIdx: number): Itinerar
     ...it,
     days: it.days.map((d, di) =>
       di !== dayIdx ? d : { ...d, activities: d.activities.filter((_, ai) => ai !== actIdx) }
-    ),
-  }
-}
-
-function reorderActivities(it: Itinerary, dayIdx: number, oldIdx: number, newIdx: number): Itinerary {
-  return {
-    ...it,
-    days: it.days.map((d, di) =>
-      di !== dayIdx ? d : { ...d, activities: arrayMove(d.activities, oldIdx, newIdx) }
     ),
   }
 }
@@ -772,7 +814,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
     if (!over || active.id === over.id || !onUpdateItinerary) return
     const parts = String(active.id).split(':')
     const overParts = String(over.id).split(':')
-    onUpdateItinerary(reorderActivities(itinerary, Number(parts[1]), Number(parts[2]), Number(overParts[2])))
+    onUpdateItinerary(reorderActivitiesAndReschedule(itinerary, Number(parts[1]), Number(parts[2]), Number(overParts[2])))
   }
 
   const commonCardProps = {
