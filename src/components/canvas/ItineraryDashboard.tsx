@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/static-components */
 
-import { useMemo, useRef, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -48,6 +48,71 @@ function formatMinutes(minutes: number) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`
 }
 
+function parseClockTime(value?: string) {
+  if (!value) return null
+  const match = value.match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) return null
+  const hours = Number(match[1])
+  const minutes = Number(match[2])
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null
+  return hours * 60 + minutes
+}
+
+function formatClockTime(totalMinutes: number) {
+  const minutesInDay = 24 * 60
+  const normalized = ((Math.round(totalMinutes) % minutesInDay) + minutesInDay) % minutesInDay
+  const hours = Math.floor(normalized / 60)
+  const minutes = normalized % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+function diffClockMinutes(start?: string, end?: string) {
+  const startMinutes = parseClockTime(start)
+  const endMinutes = parseClockTime(end)
+  if (startMinutes == null || endMinutes == null || endMinutes <= startMinutes) return null
+  return endMinutes - startMinutes
+}
+
+function endTimeFromDuration(start?: string, durationMinutes?: number) {
+  const startMinutes = parseClockTime(start)
+  if (startMinutes == null || !durationMinutes || durationMinutes <= 0) return null
+  return formatClockTime(startMinutes + durationMinutes)
+}
+
+function buildTimePatch(activity: Activity, field: string, value: string): Partial<Activity> {
+  if (field === 'startTime') {
+    const patch: Partial<Activity> = { startTime: value || undefined }
+    if (!value) return patch
+
+    const syncedEnd = endTimeFromDuration(value, activity.durationMinutes)
+    if (syncedEnd) patch.endTime = syncedEnd
+    else {
+      const syncedDuration = diffClockMinutes(value, activity.endTime)
+      if (syncedDuration != null) patch.durationMinutes = syncedDuration
+    }
+    return patch
+  }
+
+  if (field === 'endTime') {
+    const patch: Partial<Activity> = { endTime: value || undefined }
+    const syncedDuration = diffClockMinutes(activity.startTime, value)
+    if (syncedDuration != null) patch.durationMinutes = syncedDuration
+    return patch
+  }
+
+  if (field === 'dur') {
+    const durationMinutes = Number(value)
+    const patch: Partial<Activity> = {
+      durationMinutes: value && Number.isFinite(durationMinutes) && durationMinutes > 0 ? durationMinutes : undefined,
+    }
+    const syncedEnd = endTimeFromDuration(activity.startTime, patch.durationMinutes)
+    if (syncedEnd) patch.endTime = syncedEnd
+    return patch
+  }
+
+  return {}
+}
+
 const MODE_LABELS: Record<TravelOption['mode'], string> = {
   walk: 'Walk',
   transit: 'Transit',
@@ -86,6 +151,39 @@ function hoursSourceLabel(source?: Activity['hoursSource']) {
   if (source === 'osm') return 'OpenStreetMap'
   if (source === 'gemini') return 'MeetU estimate'
   return 'Not verified yet'
+}
+
+function travelGapStatus(previous: Activity | undefined, current: Activity | null, travelMinutes?: number) {
+  if (!previous || !current || !travelMinutes) return null
+  const previousEnd = parseClockTime(previous.endTime)
+  const currentStart = parseClockTime(current.startTime)
+  if (previousEnd == null || currentStart == null) return null
+
+  const available = currentStart - previousEnd
+  if (available < travelMinutes) {
+    return {
+      type: 'conflict' as const,
+      available,
+      needed: travelMinutes,
+      shortBy: travelMinutes - available,
+    }
+  }
+
+  return {
+    type: 'ok' as const,
+    available,
+    needed: travelMinutes,
+    buffer: available - travelMinutes,
+  }
+}
+
+function travelWindow(previous: Activity, durationMinutes: number) {
+  const start = parseClockTime(previous.endTime)
+  if (start == null) return null
+  return {
+    start: previous.endTime,
+    end: formatClockTime(start + durationMinutes),
+  }
 }
 
 // ── Immutable update helpers ──────────────────────────────────────────────────
@@ -190,7 +288,6 @@ function ActivityCard({
 }: ActivityCardProps) {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
   const [showMoveMenu, setShowMoveMenu] = useState(false)
-  const primaryTravelOption = travelOptionsForActivity(act)[0]
 
   const eid = (field: string) => `act:${dayIdx}:${actIdx}:${field}`
 
@@ -337,12 +434,6 @@ function ActivityCard({
         />
       </p>
 
-      {primaryTravelOption && (
-        <p className="mt-2 truncate rounded-xl bg-[#f7f1e9] px-2.5 py-1.5 text-[11px] font-medium text-[#75624c]">
-          {primaryTravelOption.durationMinutes} min {MODE_LABELS[primaryTravelOption.mode]} · {primaryTravelOption.routeName ? `${primaryTravelOption.routeName}: ` : ''}{primaryTravelOption.description}
-        </p>
-      )}
-
       {act.hoursWarning && (
         <div
           className="mt-2.5 flex items-start gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5"
@@ -355,6 +446,63 @@ function ActivityCard({
       {!act.hoursWarning && act.hoursNote && (
         <p className="mt-2 text-[11px] text-[#9e8c78]">🕐 {act.hoursNote}</p>
       )}
+    </div>
+  )
+}
+
+interface TransitSegmentRowProps {
+  previous: Activity
+  current: Activity
+  currentIndex: number
+  option: TravelOption
+  status: ReturnType<typeof travelGapStatus>
+  onSelect: () => void
+}
+
+function TransitSegmentRow({ previous, current, currentIndex, option, status, onSelect }: TransitSegmentRowProps) {
+  const window = travelWindow(previous, option.durationMinutes)
+  const hasConflict = status?.type === 'conflict'
+  const statusText = hasConflict
+    ? `short ${formatMinutes(status.shortBy)}`
+    : status && status.buffer > 0
+      ? `${formatMinutes(status.buffer)} buffer`
+      : null
+
+  return (
+    <div className="grid gap-3 md:grid-cols-[80px_minmax(0,1fr)]">
+      <div className="text-left md:text-right">
+        <div className="text-[10px] font-semibold text-[#9a876f]">
+          {window ? `${window.start} – ${window.end}` : 'Between stops'}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onSelect}
+        className="group flex min-w-0 items-center gap-2 py-0.5 text-left"
+        title={`${option.description} to ${current.title}`}
+      >
+        <span className={`h-px w-8 shrink-0 ${hasConflict ? 'bg-amber-300' : 'bg-[#d7c8b3]'}`} />
+        <span className={`flex h-5 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-black ${
+          hasConflict ? 'bg-amber-100 text-amber-700' : 'bg-[#e1eadb] text-[#526931]'
+        }`}>
+          {MODE_BADGES[option.mode]}
+        </span>
+        <span className="min-w-0 truncate text-[11px] font-semibold text-[#75624c] transition group-hover:text-[#2f2419]">
+          {MODE_LABELS[option.mode]} · {option.routeName ?? `to stop ${currentIndex + 1}`} · {formatMinutes(option.durationMinutes)}
+        </span>
+        {option.source === 'google' && (
+          <span className="hidden shrink-0 rounded-full bg-[#f1eadf] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#9a876f] sm:inline">
+            Google
+          </span>
+        )}
+        {statusText && (
+          <span className={`hidden shrink-0 text-[10px] font-semibold sm:inline ${hasConflict ? 'text-amber-700' : 'text-[#6f8a68]'}`}>
+            {statusText}
+          </span>
+        )}
+        <span className={`h-px min-w-3 flex-1 ${hasConflict ? 'bg-amber-300' : 'bg-[#d7c8b3]'}`} />
+      </button>
     </div>
   )
 }
@@ -525,7 +673,9 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
   const travelers = itinerary.trip.travelers
   const selectedActivityIdx = Math.min(selectedActivityIndex, Math.max((day?.activities.length ?? 1) - 1, 0))
   const selectedActivity = day?.activities[selectedActivityIdx] ?? null
+  const selectedPreviousActivity = selectedActivityIdx > 0 ? day?.activities[selectedActivityIdx - 1] : undefined
   const selectedTravelOptions = selectedActivity ? travelOptionsForActivity(selectedActivity) : []
+  const selectedTravelStatus = travelGapStatus(selectedPreviousActivity, selectedActivity, selectedTravelOptions[0]?.durationMinutes)
   const displayTitle = savedTripTitle?.trim() || itinerary.trip.destination
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
@@ -557,9 +707,10 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
       if (field === 'title') updated = patchActivity(itinerary, dayIdx, actIdx, { title: value })
       else if (field === 'desc') updated = patchActivity(itinerary, dayIdx, actIdx, { description: value })
       else if (field === 'loc') updated = patchActivity(itinerary, dayIdx, actIdx, { location: value })
-      else if (field === 'startTime') updated = patchActivity(itinerary, dayIdx, actIdx, { startTime: value || undefined })
-      else if (field === 'endTime') updated = patchActivity(itinerary, dayIdx, actIdx, { endTime: value || undefined })
-      else if (field === 'dur') updated = patchActivity(itinerary, dayIdx, actIdx, { durationMinutes: value ? Number(value) : undefined })
+      else if (field === 'startTime' || field === 'endTime' || field === 'dur') {
+        const activity = itinerary.days[dayIdx]?.activities[actIdx]
+        updated = activity ? patchActivity(itinerary, dayIdx, actIdx, buildTimePatch(activity, field, value)) : itinerary
+      }
       else if (field === 'type') updated = patchActivity(itinerary, dayIdx, actIdx, { type: value as Activity['type'] })
     }
 
@@ -797,24 +948,44 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                 >
                   <SortableContext items={activityIds} strategy={verticalListSortingStrategy}>
                     <div className="space-y-3">
-                      {day.activities.map((act, i) => (
-                        <SortableActivityRow
-                          key={`act:${safeActiveDay}:${i}`}
-                          dragId={`act:${safeActiveDay}:${i}`}
-                          act={act}
-                          index={i}
-                          actIdx={i}
-                          totalActivities={day.activities.length}
-                          onDelete={() => onUpdateItinerary?.(removeActivity(itinerary, safeActiveDay, i))}
-                          onMoveToDay={(toDayIdx) => onUpdateItinerary?.(moveActivityToDay(itinerary, safeActiveDay, i, toDayIdx))}
-                          isSelected={i === selectedActivityIdx}
-                          onSelect={() => {
-                            setSelectedActivityIndex(i)
-                            setContextTab('details')
-                          }}
-                          {...commonCardProps}
-                        />
-                      ))}
+                      {day.activities.map((act, i) => {
+                        const nextActivity = day.activities[i + 1]
+                        const transitOption = nextActivity ? travelOptionsForActivity(nextActivity)[0] : null
+                        const transitStatus = transitOption ? travelGapStatus(act, nextActivity, transitOption.durationMinutes) : null
+
+                        return (
+                          <Fragment key={`act-group:${safeActiveDay}:${i}`}>
+                            <SortableActivityRow
+                              dragId={`act:${safeActiveDay}:${i}`}
+                              act={act}
+                              index={i}
+                              actIdx={i}
+                              totalActivities={day.activities.length}
+                              onDelete={() => onUpdateItinerary?.(removeActivity(itinerary, safeActiveDay, i))}
+                              onMoveToDay={(toDayIdx) => onUpdateItinerary?.(moveActivityToDay(itinerary, safeActiveDay, i, toDayIdx))}
+                              isSelected={i === selectedActivityIdx}
+                              onSelect={() => {
+                                setSelectedActivityIndex(i)
+                                setContextTab('details')
+                              }}
+                              {...commonCardProps}
+                            />
+                            {nextActivity && transitOption && (
+                              <TransitSegmentRow
+                                previous={act}
+                                current={nextActivity}
+                                currentIndex={i + 1}
+                                option={transitOption}
+                                status={transitStatus}
+                                onSelect={() => {
+                                  setSelectedActivityIndex(i + 1)
+                                  setContextTab('details')
+                                }}
+                              />
+                            )}
+                          </Fragment>
+                        )
+                      })}
                     </div>
                   </SortableContext>
 
@@ -989,6 +1160,17 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                               </div>
                             </div>
                           ))}
+                          {selectedTravelStatus && (
+                            <div className={`rounded-2xl border px-3 py-2 text-xs leading-5 ${
+                              selectedTravelStatus.type === 'conflict'
+                                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                : 'border-[#d9e6cf] bg-[#f3f8ee] text-[#526931]'
+                            }`}>
+                              {selectedTravelStatus.type === 'conflict'
+                                ? `Timing conflict: only ${formatMinutes(Math.max(selectedTravelStatus.available, 0))} is available between stops, but travel needs about ${formatMinutes(selectedTravelStatus.needed)}. Short by ${formatMinutes(selectedTravelStatus.shortBy)}.`
+                                : `Travel fits: ${formatMinutes(selectedTravelStatus.needed)} travel with about ${formatMinutes(selectedTravelStatus.buffer)} buffer.`}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="mt-2 text-xs leading-5 text-[#8a7965]">
