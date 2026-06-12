@@ -66,6 +66,12 @@ function formatClockTime(totalMinutes: number) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
+function shiftClockTime(value: string | undefined, deltaMinutes: number) {
+  const minutes = parseClockTime(value)
+  if (minutes == null) return value
+  return formatClockTime(minutes + deltaMinutes)
+}
+
 function diffClockMinutes(start?: string, end?: string) {
   const startMinutes = parseClockTime(start)
   const endMinutes = parseClockTime(end)
@@ -111,6 +117,15 @@ function buildTimePatch(activity: Activity, field: string, value: string): Parti
   }
 
   return {}
+}
+
+function shiftActivityTimes(activity: Activity, deltaMinutes: number): Activity {
+  if (deltaMinutes === 0) return activity
+  return {
+    ...activity,
+    startTime: shiftClockTime(activity.startTime, deltaMinutes),
+    endTime: shiftClockTime(activity.endTime, deltaMinutes),
+  }
 }
 
 const MODE_LABELS: Record<TravelOption['mode'], string> = {
@@ -197,6 +212,37 @@ function patchActivity(it: Itinerary, dayIdx: number, actIdx: number, patch: Par
         activities: d.activities.map((a, ai) => ai !== actIdx ? a : { ...a, ...patch }),
       }
     ),
+  }
+}
+
+function patchActivityAndShiftFollowing(it: Itinerary, dayIdx: number, actIdx: number, patch: Partial<Activity>): Itinerary {
+  const originalActivity = it.days[dayIdx]?.activities[actIdx]
+  if (!originalActivity) return it
+
+  const updatedActivity = { ...originalActivity, ...patch }
+  const oldEnd = parseClockTime(originalActivity.endTime)
+  const newEnd = parseClockTime(updatedActivity.endTime)
+  const deltaMinutes = oldEnd != null && newEnd != null ? newEnd - oldEnd : 0
+  let shouldShift = deltaMinutes !== 0
+
+  return {
+    ...it,
+    days: it.days.map((d, di) => {
+      if (di !== dayIdx) return d
+
+      return {
+        ...d,
+        activities: d.activities.map((activity, ai) => {
+          if (ai === actIdx) return updatedActivity
+          if (ai <= actIdx || !shouldShift) return activity
+          if (activity.isFixedTime) {
+            shouldShift = false
+            return activity
+          }
+          return shiftActivityTimes(activity, deltaMinutes)
+        }),
+      }
+    }),
   }
 }
 
@@ -709,7 +755,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
       else if (field === 'loc') updated = patchActivity(itinerary, dayIdx, actIdx, { location: value })
       else if (field === 'startTime' || field === 'endTime' || field === 'dur') {
         const activity = itinerary.days[dayIdx]?.activities[actIdx]
-        updated = activity ? patchActivity(itinerary, dayIdx, actIdx, buildTimePatch(activity, field, value)) : itinerary
+        updated = activity ? patchActivityAndShiftFollowing(itinerary, dayIdx, actIdx, buildTimePatch(activity, field, value)) : itinerary
       }
       else if (field === 'type') updated = patchActivity(itinerary, dayIdx, actIdx, { type: value as Activity['type'] })
     }
