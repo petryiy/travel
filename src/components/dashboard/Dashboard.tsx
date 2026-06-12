@@ -62,13 +62,12 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
           </div>
 
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-            <button
-              type="button"
-              className="flex-1 rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-sm font-semibold text-[#7d6c58] opacity-60 sm:flex-none"
-              disabled
+            <Link
+              href="/footprints"
+              className="flex-1 rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-center text-sm font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59] sm:flex-none"
             >
               Footprints
-            </button>
+            </Link>
             <Link
               href="/gallery"
               className="flex-1 rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-center text-sm font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59] sm:flex-none"
