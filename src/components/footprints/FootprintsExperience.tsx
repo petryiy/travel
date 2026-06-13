@@ -250,6 +250,7 @@ export function FootprintsExperience({ userName }: Props) {
   const [developingId, setDevelopingId] = useState<string | null>(null)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [activeMemoryId, setActiveMemoryId] = useState<string | null>(null)
+  const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [placeQuery, setPlaceQuery] = useState('')
   const [placeSearchStatus, setPlaceSearchStatus] = useState<string | null>(null)
@@ -279,6 +280,7 @@ export function FootprintsExperience({ userName }: Props) {
   function openDraftAt(lat: number, lng: number, place: string) {
     addRipple(lat, lng)
     setActiveMemoryId(null)
+    setEditingMemoryId(null)
     setGalleryOpen(false)
 
     setDraft({
@@ -295,6 +297,29 @@ export function FootprintsExperience({ userName }: Props) {
     map?.panTo({ lat, lng })
     const nextZoom = Math.max(map?.getZoom() ?? DEFAULT_MAP_ZOOM, 15)
     map?.setZoom(nextZoom)
+  }
+
+  function closeDraft() {
+    setDraft(null)
+    setEditingMemoryId(null)
+  }
+
+  function editMemory(memory: FootprintMemory) {
+    setActiveMemoryId(null)
+    setGalleryOpen(false)
+    setEditingMemoryId(memory.id)
+    setDraft({
+      lat: memory.lat,
+      lng: memory.lng,
+      place: memory.place,
+      title: memory.title,
+      memoryTime: memory.memoryTime,
+      content: memory.content,
+      emoji: memory.emoji,
+      photoDataUrl: memory.photoDataUrl ?? null,
+    })
+    map?.panTo({ lat: memory.lat, lng: memory.lng })
+    map?.setZoom(Math.max(map?.getZoom() ?? DEFAULT_MAP_ZOOM, 15))
   }
 
   async function handlePlaceSearch(event: FormEvent<HTMLFormElement>) {
@@ -353,6 +378,26 @@ export function FootprintsExperience({ userName }: Props) {
 
   function sealDraft() {
     if (!draft) return
+
+    if (editingMemoryId) {
+      const updatedId = editingMemoryId
+      setManualMemories((prev) => prev.map((memory) => (
+        memory.id === updatedId
+          ? {
+              ...memory,
+              place: cleanLabel(draft.place) || memory.place,
+              title: cleanLabel(draft.title) || cleanLabel(draft.place) || memory.title,
+              memoryTime: draft.memoryTime || memory.memoryTime,
+              content: cleanLabel(draft.content) || memory.content,
+              emoji: normalizeEmoji(draft.emoji),
+              photoDataUrl: draft.photoDataUrl,
+            }
+          : memory
+      )))
+      setActiveMemoryId(updatedId)
+      closeDraft()
+      return
+    }
 
     const id = `manual-${Date.now()}`
     const seed = `${draft.lat}:${draft.lng}:${draft.title}:${draft.content}`
@@ -438,7 +483,7 @@ export function FootprintsExperience({ userName }: Props) {
               onUnmount={() => setMap(null)}
               onClick={() => {
                 setActiveMemoryId(null)
-                setDraft(null)
+                closeDraft()
               }}
             >
               {ripples.map((ripple) => (
@@ -464,7 +509,7 @@ export function FootprintsExperience({ userName }: Props) {
                     aria-label={`${memory.title} at ${memory.place}`}
                     onClick={(event) => {
                       event.stopPropagation()
-                      setDraft(null)
+                      closeDraft()
                       setActiveMemoryId((current) => current === memory.id ? null : memory.id)
                     }}
                   >
@@ -501,6 +546,13 @@ export function FootprintsExperience({ userName }: Props) {
                       <strong>{activeMemory.place}</strong>
                       <span>{activeMemory.lat.toFixed(4)}, {activeMemory.lng.toFixed(4)}</span>
                     </div>
+                    <button
+                      type="button"
+                      className="footprints-edit-button"
+                      onClick={() => editMemory(activeMemory)}
+                    >
+                      Edit memory
+                    </button>
                     <button
                       type="button"
                       className="footprints-danger-button"
@@ -578,8 +630,10 @@ export function FootprintsExperience({ userName }: Props) {
                           Upload photo
                           <input type="file" accept="image/*" onChange={handlePhotoUpload} />
                         </label>
-                        <button type="button" className="footprints-button" onClick={sealDraft}>Seal</button>
-                        <button type="button" className="footprints-close" onClick={() => setDraft(null)} aria-label="Close draft">
+                        <button type="button" className="footprints-button" onClick={sealDraft}>
+                          {editingMemoryId ? 'Save' : 'Seal'}
+                        </button>
+                        <button type="button" className="footprints-close" onClick={closeDraft} aria-label="Close draft">
                           ×
                         </button>
                       </div>
@@ -649,7 +703,7 @@ export function FootprintsExperience({ userName }: Props) {
               allMemories.map((memory, index) => (
                 <div
                   key={`line-${memory.id}`}
-                  className="footprints-line-item"
+                  className={`footprints-line-item ${index % 2 === 0 ? 'is-left' : 'is-right'}`}
                   style={{
                     '--line-delay': `${index * 45}ms`,
                     '--rotate': `${memory.rotation / 2}deg`,

@@ -620,8 +620,7 @@ body {
   z-index: 10;
 }
 
-.footprints-memory-pin:hover .footprint-polaroid,
-.footprints-memory-marker.is-polaroid:hover .footprint-polaroid {
+.footprints-memory-pin:hover .footprint-polaroid {
   transform: translateY(-8px) scale(1.28) rotate(calc(var(--rotate) * -0.25));
   box-shadow: 0 24px 42px rgba(67, 49, 30, 0.24);
 }
@@ -1038,7 +1037,7 @@ body {
 
 .footprints-danger-button {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 8px;
   border: 1px solid rgba(171, 87, 63, 0.26);
   border-radius: 999px;
   background: rgba(255, 245, 239, 0.9);
@@ -1052,6 +1051,24 @@ body {
 .footprints-danger-button:hover {
   transform: translateY(-1px);
   background: #fff0e7;
+}
+
+.footprints-edit-button {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(95, 125, 89, 0.26);
+  border-radius: 999px;
+  background: rgba(239, 247, 235, 0.9);
+  padding: 9px 12px;
+  color: #57754f;
+  font-size: 12px;
+  font-weight: 900;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.footprints-edit-button:hover {
+  transform: translateY(-1px);
+  background: #edf6e8;
 }
 
 .footprints-close {
@@ -1072,27 +1089,6 @@ body {
 .footprints-close:hover {
   transform: rotate(6deg);
   background: #fffaf0;
-}
-
-.footprints-gallery-tab {
-  position: absolute;
-  right: clamp(20px, 4vw, 56px);
-  bottom: clamp(22px, 5vh, 56px);
-  z-index: 12;
-  border: 1px solid rgba(111, 88, 56, 0.24);
-  border-radius: 999px;
-  background: rgba(255, 250, 239, 0.86);
-  padding: 12px 18px;
-  color: #6d5a40;
-  font-size: 13px;
-  font-weight: 900;
-  box-shadow: 0 16px 34px rgba(67, 49, 30, 0.14);
-  transition: transform 180ms ease, box-shadow 180ms ease;
-}
-
-.footprints-gallery-tab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 22px 44px rgba(67, 49, 30, 0.18);
 }
 
 .footprints-add-memory-fab {
@@ -1217,7 +1213,7 @@ body {
   z-index: 1;
   height: calc(100% - 78px);
   overflow-y: auto;
-  padding: 34px 24px 46px;
+  padding: 42px 24px 58px;
   background:
     radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.42), transparent 26%),
     linear-gradient(180deg, rgba(255, 250, 239, 0.82), rgba(245, 231, 204, 0.9));
@@ -1225,23 +1221,39 @@ body {
 
 .footprints-clothesline::before {
   content: "";
-  position: sticky;
-  top: 22px;
+  position: absolute;
+  left: 50%;
+  top: 34px;
+  bottom: 34px;
   z-index: 1;
   display: block;
-  height: 2px;
-  margin: 0 0 24px;
+  width: 2px;
   background:
-    repeating-linear-gradient(90deg, rgba(116, 83, 48, 0.5) 0, rgba(116, 83, 48, 0.5) 8px, rgba(116, 83, 48, 0.28) 8px, rgba(116, 83, 48, 0.28) 16px);
-  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.42);
+    repeating-linear-gradient(180deg, rgba(116, 83, 48, 0.48) 0, rgba(116, 83, 48, 0.48) 9px, rgba(116, 83, 48, 0.24) 9px, rgba(116, 83, 48, 0.24) 18px);
+  box-shadow: 2px 0 0 rgba(255, 255, 255, 0.35);
 }
 
 .footprints-line-item {
   position: relative;
+  z-index: 2;
   width: 132px;
-  margin: 0 auto 28px;
+  margin-bottom: 0;
   animation: footprints-line-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: var(--line-delay);
+}
+
+.footprints-line-item + .footprints-line-item {
+  margin-top: -42px;
+}
+
+.footprints-line-item.is-left {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.footprints-line-item.is-right {
+  margin-left: auto;
+  margin-right: 0;
 }
 
 @keyframes footprints-line-in {
@@ -1279,7 +1291,6 @@ body {
 
 .footprints-clip {
   position: absolute;
-  left: 50%;
   top: -22px;
   z-index: 3;
   width: 18px;
@@ -1289,6 +1300,35 @@ body {
   border-radius: 5px 5px 8px 8px;
   background: linear-gradient(90deg, #d9b982, #efdaa9 42%, #c99b5b);
   box-shadow: 0 4px 8px rgba(74, 51, 28, 0.16);
+}
+
+.footprints-line-item.is-left .footprints-clip {
+  left: calc(100% + 10px);
+  transform: translateX(-50%) rotate(3deg);
+}
+
+.footprints-line-item.is-right .footprints-clip {
+  left: -10px;
+  transform: translateX(-50%) rotate(-3deg);
+}
+
+.footprints-line-item::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  z-index: 2;
+  height: 1.5px;
+  background: rgba(116, 83, 48, 0.28);
+}
+
+.footprints-line-item.is-left::before {
+  left: 100%;
+  width: 24px;
+}
+
+.footprints-line-item.is-right::before {
+  right: 100%;
+  width: 24px;
 }
 
 .footprints-clip::before {
@@ -1447,10 +1487,6 @@ body {
   }
 
   .footprints-memory-pin {
-    width: 72px;
-  }
-
-  .footprints-memory-marker.is-polaroid {
     width: 72px;
   }
 
