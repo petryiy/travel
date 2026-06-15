@@ -450,6 +450,7 @@ export function FootprintsExperience({ userName }: Props) {
           <h1>My Footprints</h1>
         </div>
         <div className="footprints-topbar__actions">
+          <Link href="/footprints/story" className="footprints-button">Story export</Link>
           <Link href="/dashboard" className="footprints-button footprints-button--quiet">Dashboard</Link>
         </div>
       </header>
