@@ -44,18 +44,18 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
   }
 
   return (
-    <div className="flex-1 overflow-y-auto flex items-start justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-8">
+    <div className="flex-1 overflow-y-auto flex items-start justify-center bg-[#f7f3ec] p-4 sm:bg-gradient-to-br sm:from-indigo-50 sm:via-white sm:to-purple-50 sm:p-8">
       <div className="w-full max-w-lg">
-        <div className="mb-6 text-center sm:mb-8">
-          <div className="mb-3 text-4xl sm:text-5xl">✈️</div>
-          <h1 className="text-2xl font-bold text-zinc-900">Plan your next trip</h1>
-          <p className="text-zinc-500 text-sm mt-1.5">Tell us the basics and Gemini will do the rest</p>
+        <div className="mb-5 text-left sm:mb-8 sm:text-center">
+          <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e1eadb] text-2xl shadow-sm sm:block sm:h-auto sm:w-auto sm:bg-transparent sm:text-5xl sm:shadow-none">✈️</div>
+          <h1 className="text-2xl font-bold text-[#2f2419] sm:text-zinc-900">Plan your next trip</h1>
+          <p className="mt-1.5 text-sm text-[#7d6c58] sm:text-zinc-500">Tell MeetU the basics and we will shape the route.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl bg-white p-5 shadow-xl shadow-zinc-200/60 sm:p-7">
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-[28px] border border-[#e0d7cb] bg-[#fffaf2] p-4 shadow-sm sm:space-y-5 sm:rounded-3xl sm:border-0 sm:bg-white sm:p-7 sm:shadow-xl sm:shadow-zinc-200/60">
           {/* Destination */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
               Destination
             </label>
             <input
@@ -64,12 +64,12 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
               onChange={(e) => setDestination(e.target.value)}
               placeholder="e.g. Tokyo, Paris, Bali…"
               required
-              className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+              className="w-full rounded-xl border border-[#d8c9b5] bg-white px-4 py-3 text-base text-[#2f2419] outline-none transition placeholder:text-[#b2a28d] focus:border-transparent focus:ring-2 focus:ring-[#8ba27e] sm:border-zinc-200 sm:py-2.5 sm:text-sm sm:text-zinc-900 sm:placeholder:text-zinc-400 sm:focus:ring-indigo-400"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
               Staying near
             </label>
             <input
@@ -77,14 +77,14 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
               value={accommodationLocation}
               onChange={(e) => setAccommodationLocation(e.target.value)}
               placeholder="e.g. The Rocks, Shinjuku, hotel name, or address"
-              className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+              className="w-full rounded-xl border border-[#d8c9b5] bg-white px-4 py-3 text-base text-[#2f2419] outline-none transition placeholder:text-[#b2a28d] focus:border-transparent focus:ring-2 focus:ring-[#8ba27e] sm:border-zinc-200 sm:py-2.5 sm:text-sm sm:text-zinc-900 sm:placeholder:text-zinc-400 sm:focus:ring-indigo-400"
             />
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
                 Start date
               </label>
               <input
@@ -93,11 +93,11 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
                 min={today}
                 onChange={(e) => setStartDate(e.target.value)}
                 required
-                className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                className="w-full rounded-xl border border-[#d8c9b5] bg-white px-4 py-3 text-base text-[#2f2419] outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#8ba27e] sm:border-zinc-200 sm:py-2.5 sm:text-sm sm:text-zinc-900 sm:focus:ring-indigo-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
                 End date
               </label>
               <input
@@ -106,14 +106,14 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
                 min={startDate || today}
                 onChange={(e) => setEndDate(e.target.value)}
                 required
-                className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                className="w-full rounded-xl border border-[#d8c9b5] bg-white px-4 py-3 text-base text-[#2f2419] outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#8ba27e] sm:border-zinc-200 sm:py-2.5 sm:text-sm sm:text-zinc-900 sm:focus:ring-indigo-400"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
                 Daily start
               </label>
               <input
@@ -121,11 +121,11 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
                 value={dailyStartTime}
                 onChange={(e) => setDailyStartTime(e.target.value)}
                 required
-                className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                className="w-full rounded-xl border border-[#d8c9b5] bg-white px-4 py-3 text-base text-[#2f2419] outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#8ba27e] sm:border-zinc-200 sm:py-2.5 sm:text-sm sm:text-zinc-900 sm:focus:ring-indigo-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
                 Back by
               </label>
               <input
@@ -133,7 +133,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
                 value={dailyEndTime}
                 onChange={(e) => setDailyEndTime(e.target.value)}
                 required
-                className="w-full border border-zinc-200 rounded-xl px-4 py-2.5 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
+                className="w-full rounded-xl border border-[#d8c9b5] bg-white px-4 py-3 text-base text-[#2f2419] outline-none transition focus:border-transparent focus:ring-2 focus:ring-[#8ba27e] sm:border-zinc-200 sm:py-2.5 sm:text-sm sm:text-zinc-900 sm:focus:ring-indigo-400"
               />
             </div>
           </div>
@@ -144,32 +144,32 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
 
           {/* Travelers */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
               Travelers
             </label>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setTravelers((n) => Math.max(1, n - 1))}
-                className="w-9 h-9 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition text-lg font-light"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d8c9b5] bg-white text-lg font-light text-[#5f4c36] transition hover:bg-[#fbf7ef] sm:h-9 sm:w-9 sm:border-zinc-200 sm:text-zinc-600 sm:hover:bg-zinc-50"
               >
                 −
               </button>
-              <span className="text-zinc-900 font-semibold text-lg w-6 text-center">{travelers}</span>
+              <span className="w-8 text-center text-lg font-semibold text-[#2f2419] sm:w-6 sm:text-zinc-900">{travelers}</span>
               <button
                 type="button"
                 onClick={() => setTravelers((n) => Math.min(10, n + 1))}
-                className="w-9 h-9 rounded-full border border-zinc-200 flex items-center justify-center text-zinc-600 hover:bg-zinc-50 transition text-lg font-light"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d8c9b5] bg-white text-lg font-light text-[#5f4c36] transition hover:bg-[#fbf7ef] sm:h-9 sm:w-9 sm:border-zinc-200 sm:text-zinc-600 sm:hover:bg-zinc-50"
               >
                 +
               </button>
-              <span className="text-sm text-zinc-400 ml-1">{travelers === 1 ? 'person' : 'people'}</span>
+              <span className="ml-1 text-sm text-[#9a876f] sm:text-zinc-400">{travelers === 1 ? 'person' : 'people'}</span>
             </div>
           </div>
 
           {/* Trip style */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[#7d6c58] sm:text-zinc-500">
               Trip style
             </label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -178,16 +178,16 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
                   key={s.value}
                   type="button"
                   onClick={() => setStyle(s.value)}
-                  className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition ${
+                  className={`flex items-start gap-2.5 rounded-xl border p-3 text-left transition ${
                     style === s.value
-                      ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-400'
-                      : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                      ? 'border-[#6f8a68] bg-[#eef5e9] ring-1 ring-[#8ba27e] sm:border-indigo-500 sm:bg-indigo-50 sm:ring-indigo-400'
+                      : 'border-[#d8c9b5] bg-white hover:border-[#bda98d] hover:bg-[#fbf7ef] sm:border-zinc-200 sm:hover:border-zinc-300 sm:hover:bg-zinc-50'
                   }`}
                 >
                   <span className="text-xl leading-none mt-0.5">{s.emoji}</span>
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">{s.label}</p>
-                    <p className="text-xs text-zinc-400 leading-snug">{s.desc}</p>
+                    <p className="text-sm font-semibold text-[#2f2419] sm:text-zinc-900">{s.label}</p>
+                    <p className="text-xs leading-snug text-[#9a876f] sm:text-zinc-400">{s.desc}</p>
                   </div>
                 </button>
               ))}
@@ -197,7 +197,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
           <button
             type="submit"
             disabled={!destination.trim() || !startDate || !endDate || dailyStartTime >= dailyEndTime}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-semibold text-sm rounded-xl py-3 transition"
+            className="w-full rounded-xl bg-[#5f7d59] py-3.5 text-sm font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-40 sm:bg-indigo-600 sm:py-3 sm:hover:bg-indigo-700"
           >
             Start planning →
           </button>
