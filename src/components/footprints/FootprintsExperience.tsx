@@ -190,6 +190,14 @@ function normalizeEmoji(value: string) {
   return value.trim().slice(0, 4) || '📍'
 }
 
+function scaleForZoom(zoom: number) {
+  if (zoom <= 5) return 0.68
+  if (zoom <= 8) return 0.78
+  if (zoom <= 11) return 0.88
+  if (zoom <= 13) return 0.96
+  return 1
+}
+
 function MiniPolaroid({
   memory,
   isDeveloping = false,
@@ -255,6 +263,7 @@ export function FootprintsExperience({ userName }: Props) {
   const [placeQuery, setPlaceQuery] = useState('')
   const [placeSearchStatus, setPlaceSearchStatus] = useState<string | null>(null)
   const [isSearchingPlace, setIsSearchingPlace] = useState(false)
+  const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM)
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(manualMemories))
@@ -297,6 +306,7 @@ export function FootprintsExperience({ userName }: Props) {
     map?.panTo({ lat, lng })
     const nextZoom = Math.max(map?.getZoom() ?? DEFAULT_MAP_ZOOM, 15)
     map?.setZoom(nextZoom)
+    setMapZoom(nextZoom)
   }
 
   function closeDraft() {
@@ -319,7 +329,9 @@ export function FootprintsExperience({ userName }: Props) {
       photoDataUrl: memory.photoDataUrl ?? null,
     })
     map?.panTo({ lat: memory.lat, lng: memory.lng })
-    map?.setZoom(Math.max(map?.getZoom() ?? DEFAULT_MAP_ZOOM, 15))
+    const nextZoom = Math.max(map?.getZoom() ?? DEFAULT_MAP_ZOOM, 15)
+    map?.setZoom(nextZoom)
+    setMapZoom(nextZoom)
   }
 
   async function handlePlaceSearch(event: FormEvent<HTMLFormElement>) {
@@ -438,6 +450,8 @@ export function FootprintsExperience({ userName }: Props) {
     setDevelopingId((current) => current === memoryId ? null : current)
   }
 
+  const mapMemoryScale = scaleForZoom(mapZoom)
+
   return (
     <main className="footprints-page">
       <header className="footprints-topbar" data-no-map-drop>
@@ -480,8 +494,13 @@ export function FootprintsExperience({ userName }: Props) {
               options={FOOTPRINT_MAP_OPTIONS}
               onLoad={(loadedMap) => {
                 setMap(loadedMap)
+                setMapZoom(loadedMap.getZoom() ?? DEFAULT_MAP_ZOOM)
               }}
               onUnmount={() => setMap(null)}
+              onIdle={() => {
+                const nextZoom = map?.getZoom()
+                if (typeof nextZoom === 'number') setMapZoom(nextZoom)
+              }}
               onClick={() => {
                 setActiveMemoryId(null)
                 closeDraft()
@@ -514,7 +533,10 @@ export function FootprintsExperience({ userName }: Props) {
                       setActiveMemoryId((current) => current === memory.id ? null : memory.id)
                     }}
                   >
-                    <span className="footprint-map-pin" style={{ '--accent': memory.color } as CSSProperties}>
+                    <span
+                      className="footprint-map-pin"
+                      style={{ '--accent': memory.color, '--pin-scale': mapMemoryScale } as CSSProperties}
+                    >
                       <span>{memory.emoji}</span>
                     </span>
                   </button>
@@ -528,6 +550,7 @@ export function FootprintsExperience({ userName }: Props) {
                 >
                   <div
                     className="footprints-memory-popover"
+                    style={{ '--memory-scale': mapMemoryScale } as CSSProperties}
                     data-no-map-drop
                     onClick={stopMapEvent}
                     onMouseDown={stopMapEvent}
@@ -570,93 +593,9 @@ export function FootprintsExperience({ userName }: Props) {
                   position={{ lat: draft.lat, lng: draft.lng }}
                   mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
                 >
-                  <div
-                    className="footprints-draft"
-                    data-no-map-drop
-                    onClick={stopMapEvent}
-                    onMouseDown={stopMapEvent}
-                    onPointerDown={stopMapEvent}
-                    onTouchStart={stopMapEvent}
-                  >
-                    <div className="footprints-draft-form">
-                      <input
-                        className="footprints-place-input"
-                        value={draft.place}
-                        onChange={(event) => setDraft((prev) => prev ? { ...prev, place: event.target.value } : prev)}
-                        placeholder="Place name"
-                        maxLength={60}
-                      />
-                      <input
-                        className="footprints-place-input"
-                        value={draft.title}
-                        onChange={(event) => setDraft((prev) => prev ? { ...prev, title: event.target.value } : prev)}
-                        placeholder="Title"
-                        maxLength={72}
-                      />
-                      <input
-                        className="footprints-place-input"
-                        type="datetime-local"
-                        value={draft.memoryTime}
-                        onChange={(event) => setDraft((prev) => prev ? { ...prev, memoryTime: event.target.value } : prev)}
-                      />
-                      <div className="footprints-emoji-picker" aria-label="Choose map emoji">
-                        <input
-                          className="footprints-emoji-input"
-                          value={draft.emoji}
-                          onChange={(event) => setDraft((prev) => prev ? { ...prev, emoji: normalizeEmoji(event.target.value) } : prev)}
-                          aria-label="Custom emoji"
-                        />
-                        <div className="footprints-emoji-grid">
-                          {EMOJI_CHOICES.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              className={draft.emoji === emoji ? 'is-selected' : ''}
-                              onClick={() => setDraft((prev) => prev ? { ...prev, emoji } : prev)}
-                              aria-label={`Use ${emoji}`}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <textarea
-                        value={draft.content}
-                        onChange={(event) => setDraft((prev) => prev ? { ...prev, content: event.target.value } : prev)}
-                        placeholder="What do you want to remember here?"
-                        maxLength={180}
-                      />
-                      <div className="footprints-draft-form__actions">
-                        <label className="footprints-button footprints-button--quiet">
-                          Upload photo
-                          <input type="file" accept="image/*" onChange={handlePhotoUpload} />
-                        </label>
-                        <button type="button" className="footprints-button" onClick={sealDraft}>
-                          {editingMemoryId ? 'Save' : 'Seal'}
-                        </button>
-                        <button type="button" className="footprints-close" onClick={closeDraft} aria-label="Close draft">
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                    <div className="footprint-polaroid footprint-polaroid--draft">
-                      <span className="footprint-fastener footprint-fastener--pin" />
-                      <div className="footprint-photo">
-                        {draft.photoDataUrl ? (
-                          <div className="footprint-photo__image footprint-photo__image--preview" style={{ backgroundImage: `url(${draft.photoDataUrl})` }} />
-                        ) : (
-                          <div className="footprint-photo__blank">
-                            <span>photo</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="footprint-polaroid__caption">
-                        <strong>{cleanLabel(draft.title) || 'Memory title'}</strong>
-                        <span>{formatDate(draft.memoryTime || new Date().toISOString())}</span>
-                        <p>{cleanLabel(draft.content) || 'A quiet moment from this place.'}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <span className="footprints-draft-anchor" data-no-map-drop>
+                    <span>{draft.emoji}</span>
+                  </span>
                 </OverlayView>
               )}
             </GoogleMap>
@@ -669,6 +608,96 @@ export function FootprintsExperience({ userName }: Props) {
 
           <div className="footprints-map-vignette" />
           <div className="footprints-map-paper-grain" />
+
+          {draft && (
+            <div
+              className="footprints-draft"
+              data-no-map-drop
+              onClick={stopMapEvent}
+              onMouseDown={stopMapEvent}
+              onPointerDown={stopMapEvent}
+              onTouchStart={stopMapEvent}
+            >
+              <div className="footprints-draft-form">
+                <input
+                  className="footprints-place-input"
+                  value={draft.place}
+                  onChange={(event) => setDraft((prev) => prev ? { ...prev, place: event.target.value } : prev)}
+                  placeholder="Place name"
+                  maxLength={60}
+                />
+                <input
+                  className="footprints-place-input"
+                  value={draft.title}
+                  onChange={(event) => setDraft((prev) => prev ? { ...prev, title: event.target.value } : prev)}
+                  placeholder="Title"
+                  maxLength={72}
+                />
+                <input
+                  className="footprints-place-input"
+                  type="datetime-local"
+                  value={draft.memoryTime}
+                  onChange={(event) => setDraft((prev) => prev ? { ...prev, memoryTime: event.target.value } : prev)}
+                />
+                <div className="footprints-emoji-picker" aria-label="Choose map emoji">
+                  <input
+                    className="footprints-emoji-input"
+                    value={draft.emoji}
+                    onChange={(event) => setDraft((prev) => prev ? { ...prev, emoji: normalizeEmoji(event.target.value) } : prev)}
+                    aria-label="Custom emoji"
+                  />
+                  <div className="footprints-emoji-grid">
+                    {EMOJI_CHOICES.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={draft.emoji === emoji ? 'is-selected' : ''}
+                        onClick={() => setDraft((prev) => prev ? { ...prev, emoji } : prev)}
+                        aria-label={`Use ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  value={draft.content}
+                  onChange={(event) => setDraft((prev) => prev ? { ...prev, content: event.target.value } : prev)}
+                  placeholder="What do you want to remember here?"
+                  maxLength={180}
+                />
+                <div className="footprints-draft-form__actions">
+                  <label className="footprints-button footprints-button--quiet">
+                    Upload photo
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} />
+                  </label>
+                  <button type="button" className="footprints-button" onClick={sealDraft}>
+                    {editingMemoryId ? 'Save' : 'Seal'}
+                  </button>
+                  <button type="button" className="footprints-close" onClick={closeDraft} aria-label="Close draft">
+                    ×
+                  </button>
+                </div>
+              </div>
+              <div className="footprint-polaroid footprint-polaroid--draft">
+                <span className="footprint-fastener footprint-fastener--pin" />
+                <div className="footprint-photo">
+                  {draft.photoDataUrl ? (
+                    <div className="footprint-photo__image footprint-photo__image--preview" style={{ backgroundImage: `url(${draft.photoDataUrl})` }} />
+                  ) : (
+                    <div className="footprint-photo__blank">
+                      <span>photo</span>
+                    </div>
+                  )}
+                </div>
+                <div className="footprint-polaroid__caption">
+                  <strong>{cleanLabel(draft.title) || 'Memory title'}</strong>
+                  <span>{formatDate(draft.memoryTime || new Date().toISOString())}</span>
+                  <p>{cleanLabel(draft.content) || 'A quiet moment from this place.'}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <button
@@ -711,14 +740,28 @@ export function FootprintsExperience({ userName }: Props) {
                   } as CSSProperties}
                 >
                   <span className="footprints-clip" />
-                  <MiniPolaroid memory={memory} compact />
-                  <button
-                    type="button"
-                    className="footprints-line-delete"
-                    onClick={() => deleteMemory(memory.id)}
-                  >
-                    Delete
-                  </button>
+                  <article className="footprints-postcard">
+                    <div className="footprints-postcard__stamp">
+                      {memory.photoDataUrl ? (
+                        <span style={{ backgroundImage: `url(${memory.photoDataUrl})` }} />
+                      ) : (
+                        <strong>{memory.emoji}</strong>
+                      )}
+                    </div>
+                    <div className="footprints-postcard__copy">
+                      <p>{memory.place}</p>
+                      <h3>{memory.title}</h3>
+                      <small>{memory.content}</small>
+                      <time>{formatMemoryTime(memory)}</time>
+                    </div>
+                    <button
+                      type="button"
+                      className="footprints-line-delete"
+                      onClick={() => deleteMemory(memory.id)}
+                    >
+                      Delete
+                    </button>
+                  </article>
                 </div>
               ))
             )}
