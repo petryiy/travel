@@ -38,7 +38,7 @@ Response schema:
               ] | null,
               "isFixedTime": false,
               "title": "Activity name",
-              "description": "What to do and why it's great",
+              "description": "Detailed right-panel note: what to do here, which highlights to prioritize, and why this duration is appropriate",
               "location": "Venue / neighborhood name",
               "coordinates": { "lat": 0.0, "lng": 0.0 },
               "type": "food|attraction|transport|accommodation|activity",
@@ -72,6 +72,9 @@ Rules:
 - Treat trip.dailyStartTime and trip.dailyEndTime as the user's normal planning window for the day. Build a complete, well-paced day inside that window.
 - If trip.accommodationLocation is provided, use it as the home base for each day. Plan the first travel leg from that area/place and end the day with a realistic route back toward it.
 - Choose activities and durations based on real-world visit length, opening hours, transit, meals, and the user's travel style.
+- Use realistic visit lengths. Do not stretch a museum/gallery/single landmark to 3 hours unless it is genuinely a deep visit and the description explains how that time will be used. Typical focused museum/gallery stops are often 75-120 minutes; quick viewpoints or photo stops can be 20-45 minutes; meals are often 45-90 minutes; beach/coastal neighborhoods can be 120-180 minutes only when the plan includes walking, relaxing, food, or multiple nearby points.
+- Do not make a full day feel sparse by scheduling only 2-3 oversized activities unless the user explicitly wants a slow day, the destination is remote, or travel/appointments truly consume the day. Use as many or as few stops as are naturally needed, but prefer adding nearby short stops over inflating one venue's duration.
+- Each activity.description is for the Details panel, not the timeline card. Write 2-4 specific sentences that explain: what the traveler should do there, why the allocated duration makes sense, and how to shorten or deepen the stop if relevant.
 - If a stop is short, schedule it as short and continue with the next sensible part of the day instead of stretching it.
 - Include travelFromPrevious for every activity after the first meaningful stop of the day.
 - Also include travelOptions for every activity after the first meaningful stop of the day: 1-3 practical ways to get there, ordered by recommendation. Prefer walk/public transport when sensible, do not default to taxi, and include known route names or line numbers such as L2, T4, bus 333, ferry F1 when you can do so confidently. Set travelFromPrevious equal to the best recommended option.

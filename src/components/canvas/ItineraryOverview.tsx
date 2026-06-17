@@ -496,7 +496,6 @@ export function ItineraryOverview({
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-[#34271b]">{activity.title}</p>
                             <p className="mt-1 truncate text-xs font-semibold text-[#7b6650]">{activity.location}</p>
-                            <p className="mt-2 text-xs leading-5 text-[#5f4c36]">{activity.description}</p>
                             {activity.travelFromPrevious && (
                               <p className="mt-2 text-xs font-semibold text-[#8a6f50]">
                                 {activity.travelFromPrevious.durationMinutes} min {activity.travelFromPrevious.mode}: {activity.travelFromPrevious.description}

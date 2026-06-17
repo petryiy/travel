@@ -52,8 +52,8 @@ function ArrowIcon() {
 export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }: Props) {
   return (
     <main className="min-h-full flex-1 overflow-y-auto bg-[#f7f3ec] text-[#2f2419]">
-      <section className="border-b border-[#e0d7cb] bg-[#fbf8f2]">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+      <section className="sticky top-0 z-20 border-b border-[#e0d7cb] bg-[#fbf8f2]/95 backdrop-blur lg:static lg:bg-[#fbf8f2] lg:backdrop-blur-0">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           <div>
             <h1 className="text-xl font-bold text-[#2f2419]">Your trips</h1>
             <p className="mt-1 text-sm text-[#7d6c58]">
@@ -61,33 +61,33 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
             </p>
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Link
               href="/footprints"
-              className="flex-1 rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-center text-sm font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59] sm:flex-none"
+              className="rounded-full border border-[#d8cbb9] bg-white px-3 py-2 text-center text-xs font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59] sm:flex-none sm:px-4 sm:text-sm"
             >
               Footprints
             </Link>
             <Link
               href="/gallery"
-              className="flex-1 rounded-full border border-[#d8cbb9] bg-white px-4 py-2 text-center text-sm font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59] sm:flex-none"
+              className="rounded-full border border-[#d8cbb9] bg-white px-3 py-2 text-center text-xs font-semibold text-[#7d6c58] transition hover:bg-[#fffaf2] hover:text-[#5f7d59] sm:flex-none sm:px-4 sm:text-sm"
             >
               Gallery
             </Link>
             <button
               type="button"
               onClick={onNewTrip}
-              className="inline-flex flex-[1_1_100%] items-center justify-center gap-2 rounded-full bg-[#5f7d59] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4f6b49] sm:flex-none"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#5f7d59] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#4f6b49] sm:flex-none sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm"
             >
               <PlusIcon />
-              New trip
+              New
             </button>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-3">
+      <section className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
           <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#7d6c58]">Saved plans</h2>
           {isLoadingTrips && <span className="text-sm text-[#9c8d7a]">Loading...</span>}
         </div>
@@ -110,7 +110,7 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
         )}
 
         {savedTrips.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
             {savedTrips.map((trip) => {
               const updatedAt = formatUpdatedAt(trip.updatedAt)
               const hasCustomTitle = trip.title && trip.title !== trip.destination
@@ -120,12 +120,12 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
                   key={trip.id}
                   type="button"
                   onClick={() => onOpenTrip(trip.id)}
-                  className="group min-h-52 rounded-3xl border border-[#e0d7cb] bg-[#fffaf2] p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#cbbba5] hover:bg-white hover:shadow-md sm:min-h-60 sm:p-5"
+                  className="group rounded-2xl border border-[#e0d7cb] bg-[#fffaf2] p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#cbbba5] hover:bg-white hover:shadow-md sm:min-h-60 sm:rounded-3xl sm:p-5"
                 >
                   <div className="flex h-full flex-col">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-xl font-bold text-[#2f2419] sm:text-2xl">{trip.title || trip.destination}</p>
+                        <p className="truncate text-lg font-bold text-[#2f2419] sm:text-2xl">{trip.title || trip.destination}</p>
                         <p className="mt-1 text-sm font-medium text-[#7d6c58]">
                           {formatDateRange(trip.startDate, trip.endDate)}
                         </p>
@@ -147,16 +147,16 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
                       </div>
                     </div>
 
-                    <p className="mt-5 line-clamp-4 text-sm leading-6 text-[#66523b]">{trip.summary}</p>
+                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#66523b] sm:mt-5 sm:line-clamp-4">{trip.summary}</p>
 
-                    <div className="mt-auto pt-6">
-                      <div className="flex items-center justify-between gap-3 border-t border-[#eadfce] pt-4 text-xs font-semibold text-[#9a8a76]">
+                    <div className="mt-auto pt-4 sm:pt-6">
+                      <div className="flex items-center justify-between gap-3 border-t border-[#eadfce] pt-3 text-xs font-semibold text-[#9a8a76] sm:pt-4">
                         <span>
                           {trip.travelers} {trip.travelers === 1 ? 'traveler' : 'travelers'}
                         </span>
                         {updatedAt && <span>Updated {updatedAt}</span>}
                       </div>
-                      <div className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#5f7d59] transition group-hover:gap-3">
+                      <div className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#5f7d59] transition group-hover:gap-3 sm:mt-4">
                         Open plan
                         <ArrowIcon />
                       </div>
