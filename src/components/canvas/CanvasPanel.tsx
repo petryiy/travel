@@ -137,6 +137,7 @@ export function CanvasPanel({
         saveError={saveError}
         onSave={onSave}
         onUpdateItinerary={onUpdateItinerary}
+        onRenameTitle={onRenameSavedTrip}
         onOverview={() => onPresentationModeChange('overview')}
         onBackToDashboard={onBackToDashboard}
       />

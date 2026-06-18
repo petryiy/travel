@@ -356,6 +356,23 @@ function removeActivity(it: Itinerary, dayIdx: number, actIdx: number): Itinerar
   }
 }
 
+function addActivity(it: Itinerary, dayIdx: number): Itinerary {
+  const blank: Activity = {
+    title: '',
+    location: '',
+    description: '',
+    type: 'attraction',
+    time: 'morning',
+    durationMinutes: 60,
+  }
+  return {
+    ...it,
+    days: it.days.map((d, di) =>
+      di !== dayIdx ? d : { ...d, activities: [...d.activities, blank] }
+    ),
+  }
+}
+
 function moveActivityToDay(it: Itinerary, fromDayIdx: number, actIdx: number, toDayIdx: number): Itinerary {
   const activity = it.days[fromDayIdx]?.activities[actIdx]
   if (!activity) return it
@@ -782,14 +799,17 @@ interface Props {
   saveError: string | null
   onSave: () => void
   onUpdateItinerary?: (itinerary: Itinerary) => void
+  onRenameTitle?: (title: string) => Promise<boolean>
   onOverview?: () => void
   onBackToDashboard?: () => void
 }
 
-export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isSaving, saveStatus, saveError, onSave, onUpdateItinerary, onOverview, onBackToDashboard }: Props) {
+export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isSaving, saveStatus, saveError, onSave, onUpdateItinerary, onRenameTitle, onOverview, onBackToDashboard }: Props) {
   const [activeDay, setActiveDay] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
+  const [detailEditingId, setDetailEditingId] = useState<string | null>(null)
+  const [detailEditingValue, setDetailEditingValue] = useState('')
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [contextTab, setContextTab] = useState<'map' | 'details' | 'notes'>('map')
   const [selectedActivityIndex, setSelectedActivityIndex] = useState(0)
@@ -833,6 +853,26 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
 
     if (parts[0] === 'summary') {
       updated = { ...itinerary, summary: value }
+    } else if (parts[0] === 'trip') {
+      if (parts[1] === 'title') {
+        void onRenameTitle?.(value)
+        if (!savedTripId) updated = { ...itinerary, trip: { ...itinerary.trip, destination: value } }
+      } else if (parts[1] === 'destination') {
+        updated = { ...itinerary, trip: { ...itinerary.trip, destination: value } }
+      } else if (parts[1] === 'startDate') {
+        updated = { ...itinerary, trip: { ...itinerary.trip, startDate: value } }
+      } else if (parts[1] === 'endDate') {
+        updated = { ...itinerary, trip: { ...itinerary.trip, endDate: value } }
+      } else if (parts[1] === 'travelers') {
+        const n = parseInt(value, 10)
+        if (n > 0) updated = { ...itinerary, trip: { ...itinerary.trip, travelers: n } }
+      } else if (parts[1] === 'accommodation') {
+        updated = { ...itinerary, trip: { ...itinerary.trip, accommodationLocation: value } }
+      } else if (parts[1] === 'dailyStart') {
+        updated = { ...itinerary, trip: { ...itinerary.trip, dailyStartTime: value } }
+      } else if (parts[1] === 'dailyEnd') {
+        updated = { ...itinerary, trip: { ...itinerary.trip, dailyEndTime: value } }
+      }
     } else if (parts[0] === 'tip') {
       updated = patchTip(itinerary, Number(parts[1]), value)
     } else if (parts[0] === 'day') {
@@ -852,6 +892,32 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
 
     onUpdateItinerary(updated)
     setEditingId(null)
+  }
+
+  function startDetailEdit(id: string, value: string) { setDetailEditingId(id); setDetailEditingValue(value) }
+  function cancelDetailEdit() { setDetailEditingId(null) }
+
+  function commitDetailEdit(id: string, value: string) {
+    if (!onUpdateItinerary) { setDetailEditingId(null); return }
+    const parts = id.split(':')
+    let updated = itinerary
+
+    if (parts[0] === 'act') {
+      const [, di, ai, field] = parts
+      const dayIdx = Number(di), actIdx = Number(ai)
+      if (field === 'title') updated = patchActivity(itinerary, dayIdx, actIdx, { title: value })
+      else if (field === 'desc') updated = patchActivity(itinerary, dayIdx, actIdx, { description: value })
+      else if (field === 'loc') updated = patchActivity(itinerary, dayIdx, actIdx, { location: value })
+      else if (field === 'startTime' || field === 'endTime' || field === 'dur') {
+        const activity = itinerary.days[dayIdx]?.activities[actIdx]
+        updated = activity ? patchActivityAndShiftFollowing(itinerary, dayIdx, actIdx, buildTimePatch(activity, field, value)) : itinerary
+      } else if (field === 'type') {
+        updated = patchActivity(itinerary, dayIdx, actIdx, { type: value as Activity['type'] })
+      }
+    }
+
+    onUpdateItinerary(updated)
+    setDetailEditingId(null)
   }
 
   function handleDragStart(event: DragStartEvent) { setDraggingId(String(event.active.id)); setEditingId(null) }
@@ -1103,6 +1169,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                               isSelected={i === selectedActivityIdx}
                               onSelect={() => {
                                 setSelectedActivityIndex(i)
+                                setDetailEditingId(null)
                                 setContextTab('details')
                                 setIsMobileContextOpen(true)
                               }}
@@ -1137,6 +1204,22 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                     )}
                   </DragOverlay>
                 </DndContext>
+
+                {onUpdateItinerary && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = addActivity(itinerary, safeActiveDay)
+                      onUpdateItinerary(updated)
+                      const newIdx = updated.days[safeActiveDay].activities.length - 1
+                      setSelectedActivityIndex(newIdx)
+                      startEdit(`act:${safeActiveDay}:${newIdx}:title`, '')
+                    }}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#c8b89e] bg-transparent py-2.5 text-xs font-semibold text-[#8a7965] transition hover:border-[#8a7965] hover:bg-[#fffaf1] hover:text-[#5f4c36]"
+                  >
+                    <span className="text-base leading-none">+</span> Add stop
+                  </button>
+                )}
 
                 <div className="h-4" />
               </>
@@ -1198,11 +1281,30 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Selected stop</p>
                       <h3 className="mt-1 text-lg font-bold text-[#2f2419]">
-                        <InlineText
-                          id={`act:${safeActiveDay}:${selectedActivityIdx}:title`}
-                          value={selectedActivity.title}
-                          inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-lg font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                        />
+                        {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:title` ? (
+                          <input
+                            autoFocus
+                            value={detailEditingValue}
+                            onChange={(e) => setDetailEditingValue(e.target.value)}
+                            onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:title`, detailEditingValue)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                              if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:title`, detailEditingValue) }
+                            }}
+                            className="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-lg font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        ) : (
+                          <span
+                            role="button" tabIndex={0}
+                            onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:title`, selectedActivity.title)}
+                            onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:title`, selectedActivity.title)}
+                            className="group/edit inline-flex cursor-text items-baseline gap-1"
+                            title="Click to edit"
+                          >
+                            {selectedActivity.title}
+                            <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                          </span>
+                        )}
                       </h3>
                     </div>
 
@@ -1210,39 +1312,102 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                       <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Start</p>
                         <p className="mt-1 text-sm font-bold text-[#2f2419]">
-                          <InlineText
-                            id={`act:${safeActiveDay}:${selectedActivityIdx}:startTime`}
-                            value={selectedActivity.startTime ?? ''}
-                            inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                          />
+                          {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:startTime` ? (
+                            <input
+                              autoFocus
+                              value={detailEditingValue}
+                              onChange={(e) => setDetailEditingValue(e.target.value)}
+                              onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, detailEditingValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, detailEditingValue) }
+                              }}
+                              className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          ) : (
+                            <span
+                              role="button" tabIndex={0}
+                              onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, selectedActivity.startTime ?? '')}
+                              onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, selectedActivity.startTime ?? '')}
+                              className="group/edit inline-flex cursor-text items-baseline gap-1"
+                              title="Click to edit"
+                            >
+                              {selectedActivity.startTime ?? <span className="font-normal text-[#bbb]">—</span>}
+                              <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">End</p>
                         <p className="mt-1 text-sm font-bold text-[#2f2419]">
-                          <InlineText
-                            id={`act:${safeActiveDay}:${selectedActivityIdx}:endTime`}
-                            value={selectedActivity.endTime ?? ''}
-                            inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                          />
+                          {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:endTime` ? (
+                            <input
+                              autoFocus
+                              value={detailEditingValue}
+                              onChange={(e) => setDetailEditingValue(e.target.value)}
+                              onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, detailEditingValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, detailEditingValue) }
+                              }}
+                              className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          ) : (
+                            <span
+                              role="button" tabIndex={0}
+                              onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, selectedActivity.endTime ?? '')}
+                              onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, selectedActivity.endTime ?? '')}
+                              className="group/edit inline-flex cursor-text items-baseline gap-1"
+                              title="Click to edit"
+                            >
+                              {selectedActivity.endTime ?? <span className="font-normal text-[#bbb]">—</span>}
+                              <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
                         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Stay</p>
                         <p className="mt-1 text-sm font-bold text-[#2f2419]">
-                          <InlineText
-                            id={`act:${safeActiveDay}:${selectedActivityIdx}:dur`}
-                            value={String(selectedActivity.durationMinutes ?? '')}
-                            inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                          /> min
+                          {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:dur` ? (
+                            <input
+                              autoFocus
+                              value={detailEditingValue}
+                              onChange={(e) => setDetailEditingValue(e.target.value)}
+                              onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, detailEditingValue)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, detailEditingValue) }
+                              }}
+                              className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          ) : (
+                            <span
+                              role="button" tabIndex={0}
+                              onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, String(selectedActivity.durationMinutes ?? ''))}
+                              onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, String(selectedActivity.durationMinutes ?? ''))}
+                              className="group/edit inline-flex cursor-text items-baseline gap-1"
+                              title="Click to edit"
+                            >
+                              {selectedActivity.durationMinutes ?? '—'} <span className="font-normal text-[#8a7965]">min</span>
+                              <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold">
-                      <span className={`rounded-full border px-3 py-1.5 capitalize ${TYPE_COLORS[selectedActivity.type]}`}>
-                        {selectedActivity.type}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+                      <select
+                        value={selectedActivity.type}
+                        onChange={(e) => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:type`, e.target.value)}
+                        className={`cursor-pointer rounded-full border px-3 py-1.5 capitalize ${TYPE_COLORS[selectedActivity.type]}`}
+                      >
+                        {ACTIVITY_TYPES.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
                       {selectedActivity.isFixedTime && (
                         <span className="rounded-full bg-[#fff0c2] px-3 py-1.5 text-[#8a641f]">fixed time</span>
                       )}
@@ -1251,22 +1416,58 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                     <div>
                       <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Location</p>
                       <p className="text-sm font-semibold text-[#5f4c36]">
-                        <InlineText
-                          id={`act:${safeActiveDay}:${selectedActivityIdx}:loc`}
-                          value={selectedActivity.location}
-                          inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
-                        />
+                        {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:loc` ? (
+                          <input
+                            autoFocus
+                            value={detailEditingValue}
+                            onChange={(e) => setDetailEditingValue(e.target.value)}
+                            onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, detailEditingValue)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                              if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, detailEditingValue) }
+                            }}
+                            className="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        ) : (
+                          <span
+                            role="button" tabIndex={0}
+                            onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, selectedActivity.location)}
+                            onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, selectedActivity.location)}
+                            className="group/edit inline-flex cursor-text items-baseline gap-1"
+                            title="Click to edit"
+                          >
+                            {selectedActivity.location}
+                            <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                          </span>
+                        )}
                       </p>
                     </div>
 
                     <div>
                       <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Description</p>
-                      <InlineArea
-                        id={`act:${safeActiveDay}:${selectedActivityIdx}:desc`}
-                        value={selectedActivity.description}
-                        placeholder="Add a useful note for this stop"
-                        cls="text-sm leading-6 text-[#5f4c36]"
-                      />
+                      {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:desc` ? (
+                        <textarea
+                          autoFocus
+                          value={detailEditingValue}
+                          rows={4}
+                          placeholder="Add a useful note for this stop"
+                          onChange={(e) => setDetailEditingValue(e.target.value)}
+                          onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:desc`, detailEditingValue)}
+                          onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() } }}
+                          className="w-full resize-none rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      ) : (
+                        <span
+                          role="button" tabIndex={0}
+                          onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:desc`, selectedActivity.description)}
+                          onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:desc`, selectedActivity.description)}
+                          className="group/edit inline-flex cursor-text items-start gap-1 text-sm leading-6 text-[#5f4c36]"
+                          title="Click to edit"
+                        >
+                          {selectedActivity.description || <span className="text-[#bbb]">Add a useful note for this stop</span>}
+                          <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                        </span>
+                      )}
                       {selectedPacingNote && (
                         <div className="mt-3 rounded-2xl border border-[#dce8d3] bg-[#f5faef] px-3 py-3">
                           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Why this long</p>
@@ -1339,7 +1540,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                     </div>
                   </div>
                 ) : (
-                  <div className="flex h-full min-h-[220px] items-center justify-center text-center text-sm text-[#8a7965]">
+                  <div className="flex h-full min-h-[180px] items-center justify-center text-center text-sm text-[#8a7965]">
                     Select a stop to edit its details.
                   </div>
                 )}
@@ -1348,6 +1549,83 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
 
             {contextTab === 'notes' && (
               <div className="min-h-0 flex-1 overflow-y-auto rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] px-4 py-4">
+
+                {/* ── Trip details ── */}
+                <div className="mb-5 space-y-3 border-b border-[#e4d8c9] pb-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Trip details</p>
+
+                  <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Title</p>
+                    <div className="text-base font-bold text-[#2f2419]">
+                      <InlineText id="trip:title" value={displayTitle}
+                        inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-1.5 text-base font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Destination</p>
+                    <div className="text-sm font-semibold text-[#5f4c36]">
+                      <InlineText id="trip:destination" value={itinerary.trip.destination}
+                        inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-1.5 text-sm font-semibold text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Start</p>
+                      <p className="mt-1 text-sm font-bold text-[#2f2419]">
+                        <InlineText id="trip:startDate" value={itinerary.trip.startDate}
+                          inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">End</p>
+                      <p className="mt-1 text-sm font-bold text-[#2f2419]">
+                        <InlineText id="trip:endDate" value={itinerary.trip.endDate}
+                          inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Travelers</p>
+                      <p className="mt-1 text-sm font-bold text-[#2f2419]">
+                        <InlineText id="trip:travelers" value={String(itinerary.trip.travelers)}
+                          inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Daily hours</p>
+                      <p className="mt-1 text-[11px] font-bold text-[#2f2419]">
+                        <InlineText id="trip:dailyStart" value={itinerary.trip.dailyStartTime ?? ''}
+                          inputCls="w-12 rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-xs outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                        {' – '}
+                        <InlineText id="trip:dailyEnd" value={itinerary.trip.dailyEndTime ?? ''}
+                          inputCls="w-12 rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-xs outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </p>
+                    </div>
+                  </div>
+
+                  {itinerary.trip.accommodationLocation !== undefined && (
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Accommodation area</p>
+                      <div className="text-sm text-[#5f4c36]">
+                        <InlineText id="trip:accommodation" value={itinerary.trip.accommodationLocation ?? ''}
+                          inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-1.5 text-sm text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Trip summary</p>
                   <SummaryArea />
@@ -1525,9 +1803,15 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                     {selectedActivity ? (
                       <div className="space-y-4">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold capitalize ${TYPE_COLORS[selectedActivity.type]}`}>
-                            {selectedActivity.type}
-                          </span>
+                          <select
+                            value={selectedActivity.type}
+                            onChange={(e) => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:type`, e.target.value)}
+                            className={`cursor-pointer rounded-full border px-3 py-1.5 text-[11px] font-semibold capitalize ${TYPE_COLORS[selectedActivity.type]}`}
+                          >
+                            {ACTIVITY_TYPES.map((t) => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
                           {selectedActivity.isFixedTime && (
                             <span className="rounded-full bg-[#fff0c2] px-3 py-1.5 text-[11px] font-semibold text-[#8a641f]">fixed time</span>
                           )}
@@ -1537,31 +1821,88 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                           <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
                             <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Start</p>
                             <p className="mt-1 text-sm font-bold text-[#2f2419]">
-                              <InlineText
-                                id={`act:${safeActiveDay}:${selectedActivityIdx}:startTime`}
-                                value={selectedActivity.startTime ?? ''}
-                                inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                              />
+                              {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:startTime` ? (
+                                <input
+                                  autoFocus
+                                  value={detailEditingValue}
+                                  onChange={(e) => setDetailEditingValue(e.target.value)}
+                                  onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, detailEditingValue)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                    if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, detailEditingValue) }
+                                  }}
+                                  className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                                />
+                              ) : (
+                                <span
+                                  role="button" tabIndex={0}
+                                  onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, selectedActivity.startTime ?? '')}
+                                  onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:startTime`, selectedActivity.startTime ?? '')}
+                                  className="group/edit inline-flex cursor-text items-baseline gap-1"
+                                  title="Click to edit"
+                                >
+                                  {selectedActivity.startTime ?? <span className="font-normal text-[#bbb]">—</span>}
+                                  <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                                </span>
+                              )}
                             </p>
                           </div>
                           <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
                             <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">End</p>
                             <p className="mt-1 text-sm font-bold text-[#2f2419]">
-                              <InlineText
-                                id={`act:${safeActiveDay}:${selectedActivityIdx}:endTime`}
-                                value={selectedActivity.endTime ?? ''}
-                                inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                              />
+                              {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:endTime` ? (
+                                <input
+                                  autoFocus
+                                  value={detailEditingValue}
+                                  onChange={(e) => setDetailEditingValue(e.target.value)}
+                                  onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, detailEditingValue)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                    if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, detailEditingValue) }
+                                  }}
+                                  className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                                />
+                              ) : (
+                                <span
+                                  role="button" tabIndex={0}
+                                  onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, selectedActivity.endTime ?? '')}
+                                  onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:endTime`, selectedActivity.endTime ?? '')}
+                                  className="group/edit inline-flex cursor-text items-baseline gap-1"
+                                  title="Click to edit"
+                                >
+                                  {selectedActivity.endTime ?? <span className="font-normal text-[#bbb]">—</span>}
+                                  <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                                </span>
+                              )}
                             </p>
                           </div>
                           <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-3 py-2">
                             <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Stay</p>
                             <p className="mt-1 text-sm font-bold text-[#2f2419]">
-                              <InlineText
-                                id={`act:${safeActiveDay}:${selectedActivityIdx}:dur`}
-                                value={String(selectedActivity.durationMinutes ?? '')}
-                                inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
-                              /> min
+                              {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:dur` ? (
+                                <input
+                                  autoFocus
+                                  value={detailEditingValue}
+                                  onChange={(e) => setDetailEditingValue(e.target.value)}
+                                  onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, detailEditingValue)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                    if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, detailEditingValue) }
+                                  }}
+                                  className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                                />
+                              ) : (
+                                <span
+                                  role="button" tabIndex={0}
+                                  onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, String(selectedActivity.durationMinutes ?? ''))}
+                                  onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:dur`, String(selectedActivity.durationMinutes ?? ''))}
+                                  className="group/edit inline-flex cursor-text items-baseline gap-1"
+                                  title="Click to edit"
+                                >
+                                  {selectedActivity.durationMinutes ?? '—'} <span className="font-normal text-[#8a7965]">min</span>
+                                  <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -1569,22 +1910,58 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                         <div>
                           <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Location</p>
                           <p className="text-sm font-semibold text-[#5f4c36]">
-                            <InlineText
-                              id={`act:${safeActiveDay}:${selectedActivityIdx}:loc`}
-                              value={selectedActivity.location}
-                              inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
-                            />
+                            {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:loc` ? (
+                              <input
+                                autoFocus
+                                value={detailEditingValue}
+                                onChange={(e) => setDetailEditingValue(e.target.value)}
+                                onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, detailEditingValue)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() }
+                                  if (e.key === 'Enter') { e.preventDefault(); commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, detailEditingValue) }
+                                }}
+                                className="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                              />
+                            ) : (
+                              <span
+                                role="button" tabIndex={0}
+                                onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, selectedActivity.location)}
+                                onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:loc`, selectedActivity.location)}
+                                className="group/edit inline-flex cursor-text items-baseline gap-1"
+                                title="Click to edit"
+                              >
+                                {selectedActivity.location}
+                                <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                              </span>
+                            )}
                           </p>
                         </div>
 
                         <div>
                           <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Description</p>
-                          <InlineArea
-                            id={`act:${safeActiveDay}:${selectedActivityIdx}:desc`}
-                            value={selectedActivity.description}
-                            placeholder="Add a useful note for this stop"
-                            cls="text-sm leading-6 text-[#5f4c36]"
-                          />
+                          {detailEditingId === `act:${safeActiveDay}:${selectedActivityIdx}:desc` ? (
+                            <textarea
+                              autoFocus
+                              value={detailEditingValue}
+                              rows={4}
+                              placeholder="Add a useful note for this stop"
+                              onChange={(e) => setDetailEditingValue(e.target.value)}
+                              onBlur={() => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:desc`, detailEditingValue)}
+                              onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); cancelDetailEdit() } }}
+                              className="w-full resize-none rounded-xl border border-[#bca98d] bg-[#fffdf8] px-3 py-2 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          ) : (
+                            <span
+                              role="button" tabIndex={0}
+                              onClick={() => startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:desc`, selectedActivity.description)}
+                              onKeyDown={(e) => e.key === 'Enter' && startDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:desc`, selectedActivity.description)}
+                              className="group/edit inline-flex cursor-text items-start gap-1 text-sm leading-6 text-[#5f4c36]"
+                              title="Click to edit"
+                            >
+                              {selectedActivity.description || <span className="text-[#bbb]">Add a useful note for this stop</span>}
+                              <span className="opacity-0 text-[10px] text-[#a69682] transition group-hover/edit:opacity-60">✏</span>
+                            </span>
+                          )}
                           {selectedPacingNote && (
                             <div className="mt-3 rounded-2xl border border-[#dce8d3] bg-[#f5faef] px-3 py-3">
                               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Why this long</p>
@@ -1666,6 +2043,72 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
 
                 {contextTab === 'notes' && (
                   <div className="min-h-0 overflow-y-auto rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] px-3 py-3">
+
+                    {/* ── Trip details ── */}
+                    <div className="mb-4 space-y-3 border-b border-[#e4d8c9] pb-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Trip details</p>
+
+                      <div>
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Title</p>
+                        <div className="text-sm font-bold text-[#2f2419]">
+                          <InlineText id="trip:title" value={displayTitle}
+                            inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-2 py-1.5 text-sm font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Destination</p>
+                        <div className="text-sm text-[#5f4c36]">
+                          <InlineText id="trip:destination" value={itinerary.trip.destination}
+                            inputCls="w-full rounded-xl border border-[#bca98d] bg-[#fffdf8] px-2 py-1.5 text-sm text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-2 py-2">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Start</p>
+                          <p className="mt-0.5 text-xs font-bold text-[#2f2419]">
+                            <InlineText id="trip:startDate" value={itinerary.trip.startDate}
+                              inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-xs font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-2 py-2">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">End</p>
+                          <p className="mt-0.5 text-xs font-bold text-[#2f2419]">
+                            <InlineText id="trip:endDate" value={itinerary.trip.endDate}
+                              inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-xs font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-2 py-2">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Travelers</p>
+                          <p className="mt-0.5 text-xs font-bold text-[#2f2419]">
+                            <InlineText id="trip:travelers" value={String(itinerary.trip.travelers)}
+                              inputCls="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-xs font-bold text-[#2f2419] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-[#e4d8c9] bg-[#fffaf1] px-2 py-2">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#9a876f]">Daily hours</p>
+                          <p className="mt-0.5 text-[10px] font-bold text-[#2f2419]">
+                            <InlineText id="trip:dailyStart" value={itinerary.trip.dailyStartTime ?? ''}
+                              inputCls="w-10 rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-[10px] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                            {' – '}
+                            <InlineText id="trip:dailyEnd" value={itinerary.trip.dailyEndTime ?? ''}
+                              inputCls="w-10 rounded border border-[#bca98d] bg-[#fffdf8] px-1 py-0.5 text-[10px] outline-none ring-1 ring-[#5f7d59]/40"
+                            />
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f8a68]">Trip summary</p>
                       <SummaryArea />
