@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { getInclusiveTripDayCount } from '@/lib/tripDates'
 import type {
   Message,
   TripDetails,
@@ -79,13 +80,6 @@ function buildRouteSegments(source: Itinerary) {
 function closePoint(a?: RoutePoint, b?: { lat: number; lng: number }) {
   if (!a || !b) return false
   return Math.abs(a.lat - b.lat) < 0.0005 && Math.abs(a.lng - b.lng) < 0.0005
-}
-
-function needsRouteEnrichment(source: Itinerary) {
-  return buildRouteSegments(source).some((segment) => {
-    const activity = source.days[segment.dayIdx]?.activities[segment.actIdx]
-    return !activity?.travelOptions?.some((option) => option.source === 'google')
-  })
 }
 
 export function useChat(userId: string | null) {
@@ -175,10 +169,7 @@ export function useChat(userId: string | null) {
   }, [])
 
   const enrichRoutes = useCallback(async (newItinerary: Itinerary) => {
-    const segments = buildRouteSegments(newItinerary).filter((segment) => {
-      const activity = newItinerary.days[segment.dayIdx]?.activities[segment.actIdx]
-      return !activity?.travelOptions?.some((option) => option.source === 'google')
-    })
+    const segments = buildRouteSegments(newItinerary)
     if (segments.length === 0) return
 
     try {
@@ -272,9 +263,10 @@ export function useChat(userId: string | null) {
     setSaveError(null)
 
     const styleLabel = details.style.charAt(0).toUpperCase() + details.style.slice(1)
+    const dayCount = getInclusiveTripDayCount(details.startDate, details.endDate)
     const opener: Message = {
       role: 'user',
-      content: `I want to plan a trip to ${details.destination}. I'll be traveling from ${details.startDate} to ${details.endDate} with ${details.travelers} traveler${details.travelers > 1 ? 's' : ''}. My preferred style is: ${styleLabel}.`,
+      content: `I want to plan a ${dayCount}-day trip to ${details.destination}. I'll be traveling from ${details.startDate} to ${details.endDate} with ${details.travelers} traveler${details.travelers > 1 ? 's' : ''}. My preferred style is: ${styleLabel}.`,
     }
 
     setMessages([opener])
@@ -356,7 +348,7 @@ export function useChat(userId: string | null) {
       setClarification(null)
       setCanvasState('itinerary')
       setSaveStatus('Loaded saved trip')
-      if (needsRouteEnrichment(data.trip.itinerary)) void enrichRoutes(data.trip.itinerary)
+      void enrichRoutes(data.trip.itinerary)
     } catch {
       setSaveError('Could not open this saved trip.')
       setCanvasState('setup')
