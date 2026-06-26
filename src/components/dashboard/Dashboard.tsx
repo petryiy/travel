@@ -204,7 +204,7 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip, o
   }
 
   return (
-    <main className="min-h-full flex-1 overflow-y-auto bg-[#f7f3ec] text-[#2f2419]">
+    <main className="min-h-0 flex-1 overflow-y-auto bg-[#f7f3ec] text-[#2f2419]">
       <section className="sticky top-0 z-20 border-b border-[#e0d7cb] bg-[#fbf8f2]/95 backdrop-blur lg:static lg:bg-[#fbf8f2] lg:backdrop-blur-0">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           <div>
@@ -243,7 +243,7 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip, o
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
+      <section className="mx-auto w-full max-w-7xl px-4 pt-4 pb-[calc(2.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 sm:pb-16 lg:px-8">
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
           <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#7d6c58]">Saved plans</h2>
           {isLoadingTrips && <span className="text-sm text-[#9c8d7a]">Loading...</span>}

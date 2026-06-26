@@ -130,6 +130,8 @@ export function useChat(userId: string | null) {
   const [aiLock, setAiLock] = useState<TripLock | null>(null)
   const [presence, setPresence] = useState<TripPresence[]>([])
   const [heldDay, setHeldDay] = useState<number | null>(null)
+  // The day the editor is currently on; drives day-lock acquisition.
+  const [activeEditDay, setActiveEditDay] = useState<number | null>(null)
 
   // A trip is "collaborative" once it is saved and either shared with the user
   // or has at least one non-owner collaborator. Solo trips skip all of the
@@ -276,38 +278,39 @@ export function useChat(userId: string | null) {
     }
   }, [])
 
-  // Acquire the lock for the day the editor is on. Releases the previously held
-  // day. For a solo trip we just record the active day so editing stays enabled.
-  const acquireDayLock = useCallback(async (dayNumber: number | null) => {
-    const live = liveRef.current
-    const tripId = live.savedTripId
-    if (!tripId || !live.isCollaborative || !live.canEdit) {
-      setHeldDay(dayNumber)
-      return
-    }
-    const prev = live.heldDay
-    if (prev != null && prev !== dayNumber) {
+  // Acquire/refresh the lock for whichever day the editor is on (driven by the
+  // activeEditDay state the editor sets). Reads fresh React state directly — a
+  // ref-based callback could run with a stale "isCollaborative" on the first
+  // render and silently skip the server lock. Solo trips never enter here
+  // (gating ignores heldDay when locking is disabled). The cleanup releases the
+  // day when switching days, switching trips, or unmounting.
+  // Whether someone else currently holds the day the editor is on. Re-running
+  // the lock effect when this clears lets a blocked editor regain access the
+  // moment the other person leaves the day (no manual day-switch needed).
+  const activeDayBlockedByOther =
+    activeEditDay != null && dayLocks.some((l) => l.day === activeEditDay && l.userId !== userId)
+
+  useEffect(() => {
+    if (!savedTripId || !isCollaborativeTrip || !canEditTrip || activeEditDay == null) return
+    let cancelled = false
+    void (async () => {
       try {
-        await fetch(`/api/trips/${tripId}/locks`, {
-          method: 'DELETE', headers: JSON_HEADERS, body: JSON.stringify({ keys: [`day:${prev}`] }),
+        const res = await fetch(`/api/trips/${savedTripId}/locks`, {
+          method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ scope: 'day', day: activeEditDay }),
         })
+        if (!cancelled) setHeldDay(res.ok ? activeEditDay : null)
       } catch {
-        // ignore; it will expire
+        if (!cancelled) setHeldDay(null)
       }
+    })()
+    return () => {
+      cancelled = true
+      void fetch(`/api/trips/${savedTripId}/locks`, {
+        method: 'DELETE', headers: JSON_HEADERS, body: JSON.stringify({ keys: [`day:${activeEditDay}`] }),
+      }).catch(() => {})
     }
-    if (dayNumber == null) {
-      setHeldDay(null)
-      return
-    }
-    try {
-      const res = await fetch(`/api/trips/${tripId}/locks`, {
-        method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ scope: 'day', day: dayNumber }),
-      })
-      setHeldDay(res.ok ? dayNumber : null)
-    } catch {
-      setHeldDay(null)
-    }
-  }, [])
+    // activeDayBlockedByOther re-triggers a retry when the other editor leaves.
+  }, [activeEditDay, savedTripId, isCollaborativeTrip, canEditTrip, activeDayBlockedByOther, userId])
 
   // Poll the sync endpoint while a collaborative trip is open.
   useEffect(() => {
@@ -605,6 +608,7 @@ export function useChat(userId: string | null) {
     setCollaborators([])
     setComments([])
     setHeldDay(null)
+    setActiveEditDay(null)
     setDayLocks([])
     setAiLock(null)
     setPresence([])
@@ -636,6 +640,7 @@ export function useChat(userId: string | null) {
     setCollaborators([])
     setComments([])
     setHeldDay(null)
+    setActiveEditDay(null)
     setDayLocks([])
     setAiLock(null)
     setPresence([])
@@ -723,6 +728,7 @@ export function useChat(userId: string | null) {
     setItinerary(null)
     setClarification(null)
     setHeldDay(null)
+    setActiveEditDay(null)
     setDayLocks([])
     setAiLock(null)
     setPresence([])
@@ -1085,6 +1091,6 @@ export function useChat(userId: string | null) {
     presence,
     heldDay,
     isCollaborativeTrip,
-    acquireDayLock,
+    setActiveEditDay,
   }
 }

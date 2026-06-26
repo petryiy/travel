@@ -63,7 +63,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     presence,
     heldDay,
     isCollaborativeTrip,
-    acquireDayLock,
+    setActiveEditDay,
   } = useChat(userId)
 
   // null role = a brand-new trip the current user is creating (full access).
@@ -176,7 +176,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               presence={presence}
               heldDay={heldDay}
               lockingEnabled={isCollaborativeTrip}
-              onActiveDayChange={acquireDayLock}
+              onActiveDayChange={setActiveEditDay}
               onSetup={submitSetup}
               onSend={sendMessage}
               onUpdateItinerary={canEdit ? updateItinerary : undefined}
