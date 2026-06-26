@@ -142,12 +142,12 @@ export function useChat(userId: string | null) {
   // without re-creating them (avoids stale closures and effect churn).
   const liveRef = useRef({
     version, itinerary, messages, savedTripId, tripRole, heldDay,
-    isCollaborative: isCollaborativeTrip, canEdit: canEditTrip,
+    isCollaborative: isCollaborativeTrip, canEdit: canEditTrip, commentsCount: comments.length,
   })
   useEffect(() => {
     liveRef.current = {
       version, itinerary, messages, savedTripId, tripRole, heldDay,
-      isCollaborative: isCollaborativeTrip, canEdit: canEditTrip,
+      isCollaborative: isCollaborativeTrip, canEdit: canEditTrip, commentsCount: comments.length,
     }
   })
   const aiRunningRef = useRef(false)
@@ -328,6 +328,18 @@ export function useChat(userId: string | null) {
               await refetchTrip(savedTripId)
             } else {
               setVersion(data.version)
+            }
+          }
+          // A collaborator added/removed a comment — pull the latest thread.
+          if (typeof data.commentCount === 'number' && data.commentCount !== live.commentsCount) {
+            try {
+              const cres = await fetch(`/api/trips/${savedTripId}/comments`, { cache: 'no-store' })
+              if (cres.ok && !cancelled) {
+                const cd: { comments?: TripComment[] } = await cres.json()
+                setComments(cd.comments ?? [])
+              }
+            } catch {
+              // transient; next poll retries
             }
           }
         }

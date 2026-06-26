@@ -858,14 +858,16 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
   const myUserId = currentUserId ?? null
   const aiLockedByOther = Boolean(aiLock && aiLock.userId !== myUserId)
   const activeDayNumber = day?.day ?? null
-  const activeDayLock = (dayLocks ?? []).find((l) => l.day === activeDayNumber && l.userId !== myUserId) ?? null
+  // Locks held by OTHER people (never the current user), each on their own day.
+  const otherDayLocks = (dayLocks ?? []).filter((l) => l.userId !== myUserId)
   const canEditTrip = Boolean(onUpdateItineraryProp)
   const canEditActiveDay = canEditTrip && !aiLockedByOther && (!lockingEnabled || heldDay === activeDayNumber)
   const onUpdateItinerary = canEditActiveDay ? onUpdateItineraryProp : undefined
+  // Show what each *other* collaborator is editing, with their actual day.
   const lockBanner = aiLockedByOther
     ? `${aiLock?.userName ?? 'Someone'} is updating this plan with AI…`
-    : activeDayLock
-      ? `${activeDayLock.userName ?? 'Someone'} is editing Day ${activeDayNumber}`
+    : otherDayLocks.length > 0
+      ? otherDayLocks.map((l) => `${l.userName ?? 'Someone'} is editing Day ${l.day}`).join(' · ')
       : null
 
   // Acquire/refresh the lock for whichever day the editor is on; release on leave.
