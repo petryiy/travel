@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/static-components */
 
-import { Fragment, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -20,7 +20,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Activity, DayPlan, Itinerary, TravelOption } from '@/types/travel'
+import type { Activity, DayPlan, Itinerary, TravelOption, CollaboratorRole, TripComment, CommentAnchorType, TripLock, TripPresence } from '@/types/travel'
+import { CommentsPanel } from '@/components/collaboration/CommentsPanel'
+import { PresenceStack } from '@/components/collaboration/PresenceStack'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { MapView } from './MapView'
 
@@ -802,16 +804,31 @@ interface Props {
   onRenameTitle?: (title: string) => Promise<boolean>
   onOverview?: () => void
   onBackToDashboard?: () => void
+  role?: CollaboratorRole
+  onManageCollaborators?: () => void
+  comments?: TripComment[]
+  currentUserId?: string | null
+  canComment?: boolean
+  canManageComments?: boolean
+  onAddComment?: (body: string, anchor: { type: CommentAnchorType; day?: number | null }) => Promise<boolean>
+  onToggleCommentResolved?: (commentId: string, resolved: boolean) => Promise<boolean>
+  onDeleteComment?: (commentId: string) => Promise<boolean>
+  dayLocks?: TripLock[]
+  aiLock?: TripLock | null
+  presence?: TripPresence[]
+  heldDay?: number | null
+  lockingEnabled?: boolean
+  onActiveDayChange?: (day: number | null) => void
 }
 
-export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isSaving, saveStatus, saveError, onSave, onUpdateItinerary, onRenameTitle, onOverview, onBackToDashboard }: Props) {
+export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isSaving, saveStatus, saveError, onSave, onUpdateItinerary: onUpdateItineraryProp, onRenameTitle, onOverview, onBackToDashboard, role, onManageCollaborators, comments, currentUserId, canComment, canManageComments, onAddComment, onToggleCommentResolved, onDeleteComment, dayLocks, aiLock, presence, heldDay, lockingEnabled, onActiveDayChange }: Props) {
   const [activeDay, setActiveDay] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [detailEditingId, setDetailEditingId] = useState<string | null>(null)
   const [detailEditingValue, setDetailEditingValue] = useState('')
   const [draggingId, setDraggingId] = useState<string | null>(null)
-  const [contextTab, setContextTab] = useState<'map' | 'details' | 'notes'>('map')
+  const [contextTab, setContextTab] = useState<'map' | 'details' | 'notes' | 'comments'>('map')
   const [selectedActivityIndex, setSelectedActivityIndex] = useState(0)
   const [isMobileContextOpen, setIsMobileContextOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
@@ -833,6 +850,54 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
   const selectedTravelStatus = travelGapStatus(selectedPreviousActivity, selectedActivity, selectedTravelOptions[0]?.durationMinutes)
   const selectedPacingNote = selectedActivity ? pacingNote(selectedActivity) : null
   const displayTitle = savedTripTitle?.trim() || itinerary.trip.destination
+  const readOnlyLabel = role === 'viewer' ? 'View only' : role === 'commenter' ? 'Comment only' : null
+
+  // ── Live-collaboration gating ──────────────────────────────────────────────
+  // canEditTrip is the role-level capability; per-day editing additionally
+  // requires holding this day's lock (collaborative trips) and no active AI run.
+  const myUserId = currentUserId ?? null
+  const aiLockedByOther = Boolean(aiLock && aiLock.userId !== myUserId)
+  const activeDayNumber = day?.day ?? null
+  const activeDayLock = (dayLocks ?? []).find((l) => l.day === activeDayNumber && l.userId !== myUserId) ?? null
+  const canEditTrip = Boolean(onUpdateItineraryProp)
+  const canEditActiveDay = canEditTrip && !aiLockedByOther && (!lockingEnabled || heldDay === activeDayNumber)
+  const onUpdateItinerary = canEditActiveDay ? onUpdateItineraryProp : undefined
+  const lockBanner = aiLockedByOther
+    ? `${aiLock?.userName ?? 'Someone'} is updating this plan with AI…`
+    : activeDayLock
+      ? `${activeDayLock.userName ?? 'Someone'} is editing Day ${activeDayNumber}`
+      : null
+
+  // Acquire/refresh the lock for whichever day the editor is on; release on leave.
+  useEffect(() => {
+    if (!onActiveDayChange) return
+    onActiveDayChange(canEditTrip && !aiLockedByOther ? activeDayNumber : null)
+  }, [activeDayNumber, canEditTrip, aiLockedByOther, onActiveDayChange])
+
+  useEffect(() => {
+    if (!onActiveDayChange) return
+    return () => onActiveDayChange(null)
+  }, [onActiveDayChange])
+
+  const commentsPanel = (
+    <CommentsPanel
+      savedTripId={savedTripId}
+      dayNumber={day?.day ?? null}
+      comments={comments ?? []}
+      currentUserId={currentUserId ?? null}
+      canComment={Boolean(canComment)}
+      canManage={Boolean(canManageComments)}
+      onAdd={(body, scope) =>
+        onAddComment
+          ? onAddComment(body, scope === 'day' ? { type: 'day', day: day?.day ?? null } : { type: 'trip' })
+          : Promise.resolve(false)
+      }
+      onToggleResolved={(cid, resolved) =>
+        onToggleCommentResolved ? onToggleCommentResolved(cid, resolved) : Promise.resolve(false)
+      }
+      onDelete={(cid) => (onDeleteComment ? onDeleteComment(cid) : Promise.resolve(false))}
+    />
+  )
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
   const activityIds = day?.activities.map((_, i) => `act:${safeActiveDay}:${i}`) ?? []
@@ -1068,6 +1133,9 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            {presence && presence.length > 0 && (
+              <PresenceStack presence={presence} myUserId={myUserId} />
+            )}
             {onBackToDashboard && (
               <button
                 type="button"
@@ -1086,14 +1154,30 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                 Preview
               </button>
             )}
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={isSaving}
-              className="shrink-0 rounded-full bg-[#5f7d59] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-50"
-            >
-              {isSaving ? 'Saving…' : savedTripId ? 'Save changes' : 'Save trip'}
-            </button>
+            {readOnlyLabel && (
+              <span className="shrink-0 rounded-full bg-[#efe7d8] px-3 py-1.5 text-xs font-bold text-[#7d6c58]">
+                {readOnlyLabel}
+              </span>
+            )}
+            {onManageCollaborators && (
+              <button
+                type="button"
+                onClick={onManageCollaborators}
+                className="shrink-0 rounded-full border border-[#cde0c6] bg-[#e6f0e2] px-3.5 py-2 text-xs font-semibold text-[#426145] transition hover:bg-[#d9e9d2]"
+              >
+                Invite
+              </button>
+            )}
+            {canEditTrip && (
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={isSaving}
+                className="shrink-0 rounded-full bg-[#5f7d59] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-50"
+              >
+                {isSaving ? 'Saving…' : savedTripId ? 'Save changes' : 'Save trip'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1102,30 +1186,41 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
         <section className="flex min-h-0 flex-col border-b border-[#dfd4c5] lg:min-h-0 lg:w-[58%] lg:border-b-0 lg:border-r">
           {/* Day tabs */}
           <div className="sticky top-0 z-10 flex shrink-0 gap-1.5 overflow-x-auto border-b border-[#dfd4c5] bg-[#fbf7ef]/95 px-3 py-2 backdrop-blur sm:px-4 lg:static lg:bg-[#fbf7ef]/70 lg:backdrop-blur-0">
-            {itinerary.days.map((d, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setActiveDay(i)
-                  setSelectedActivityIndex(0)
-                  setContextTab('map')
-                  setIsMobileContextOpen(false)
-                }}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
-                  safeActiveDay === i
-                    ? 'border-[#5f7d59] bg-[#5f7d59] text-white'
-                    : 'border-[#d8c9b5] bg-[#fffaf1] text-[#75624c] hover:border-[#bca98d] hover:bg-white'
-                }`}
-              >
-                Day {d.day}
-              </button>
-            ))}
+            {itinerary.days.map((d, i) => {
+              const lockedByOther = (dayLocks ?? []).find((l) => l.day === d.day && l.userId !== myUserId)
+              return (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setActiveDay(i)
+                    setSelectedActivityIndex(0)
+                    setContextTab('map')
+                    setIsMobileContextOpen(false)
+                  }}
+                  title={lockedByOther ? `${lockedByOther.userName ?? 'Someone'} is editing this day` : undefined}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
+                    safeActiveDay === i
+                      ? 'border-[#5f7d59] bg-[#5f7d59] text-white'
+                      : 'border-[#d8c9b5] bg-[#fffaf1] text-[#75624c] hover:border-[#bca98d] hover:bg-white'
+                  }`}
+                >
+                  Day {d.day}
+                  {lockedByOther && <span aria-hidden="true" className="ml-1 opacity-80">🔒</span>}
+                </button>
+              )
+            })}
           </div>
 
           {/* Scrollable content: day strip + activities */}
           <div className="min-h-0 flex-1 overflow-y-visible px-3 py-3 sm:px-4 lg:overflow-y-auto">
             {day && (
               <>
+                {lockBanner && (
+                  <div className="mb-3 flex items-center gap-2 rounded-xl border border-[#e3d3a8] bg-[#fdf3d8] px-3 py-2 text-xs font-semibold text-[#8a6a1f]">
+                    <span aria-hidden="true">🔒</span>
+                    {lockBanner}
+                  </div>
+                )}
                 {/* ── Cut 2: Slim day strip (replaces the large card) ── */}
                 <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#e8ddd0] pb-3">
                   <h3 className="text-sm font-bold text-[#2f2419]">
@@ -1235,7 +1330,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                 <h3 className="mt-0.5 text-sm font-bold text-[#2f2419]">Day {day?.day ?? 1}</h3>
               </div>
               <div className="inline-flex rounded-full border border-[#dfd4c5] bg-[#f7f1e9] p-1">
-                {(['map', 'details', 'notes'] as const).map((tab) => (
+                {(['map', 'details', 'notes', 'comments'] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -1550,6 +1645,12 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
               </div>
             )}
 
+            {contextTab === 'comments' && (
+              <div className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] p-3">
+                {commentsPanel}
+              </div>
+            )}
+
             {contextTab === 'notes' && (
               <div className="min-h-0 flex-1 overflow-y-auto rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] px-4 py-4">
 
@@ -1715,7 +1816,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
 
       <div className="lg:hidden">
         <div className="fixed bottom-[calc(5.35rem+env(safe-area-inset-bottom))] left-3 z-[45] flex max-w-[calc(100vw-6.5rem)] gap-1.5 overflow-x-auto rounded-full border border-[#dfd4c5] bg-[#fffaf1]/95 p-1 shadow-[0_14px_34px_rgba(75,58,36,0.18)] backdrop-blur">
-          {(['map', 'details', 'notes'] as const).map((tab) => (
+          {(['map', 'details', 'notes', 'comments'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -1753,7 +1854,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="inline-flex rounded-full border border-[#dfd4c5] bg-[#f7f1e9] p-1">
-                      {(['map', 'details', 'notes'] as const).map((tab) => (
+                      {(['map', 'details', 'notes', 'comments'] as const).map((tab) => (
                         <button
                           key={tab}
                           type="button"
@@ -2044,6 +2145,12 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                         Select a stop to edit its details.
                       </div>
                     )}
+                  </div>
+                )}
+
+                {contextTab === 'comments' && (
+                  <div className="h-[52dvh] min-h-[280px] overflow-hidden rounded-[20px] border border-[#e4d8c9] bg-[#fbf7ef] p-3">
+                    {commentsPanel}
                   </div>
                 )}
 

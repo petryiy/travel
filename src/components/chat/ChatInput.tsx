@@ -6,9 +6,10 @@ interface Props {
   onSend: (text: string) => void
   disabled: boolean
   hasItinerary?: boolean
+  note?: string | null
 }
 
-export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
+export function ChatInput({ onSend, disabled, hasItinerary = false, note }: Props) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -36,6 +37,11 @@ export function ChatInput({ onSend, disabled, hasItinerary = false }: Props) {
 
   return (
     <div className="border-t border-[#dfd4c5] bg-[#f6efe3] px-3 py-2.5 sm:px-4 sm:py-3">
+      {note && (
+        <p className="mb-2 rounded-xl border border-[#e3d3a8] bg-[#fdf3d8] px-3 py-1.5 text-center text-xs font-semibold text-[#8a6a1f]">
+          {note}
+        </p>
+      )}
       <div className="flex items-end gap-2 rounded-[24px] border border-[#d8c9b5] bg-[#fffaf1] px-3 py-2 shadow-sm transition focus-within:border-[#8ba27e] focus-within:ring-4 focus-within:ring-[#8ba27e]/15">
         <textarea
           ref={textareaRef}

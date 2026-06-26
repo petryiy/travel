@@ -7,6 +7,7 @@ import { CanvasPanel } from '@/components/canvas/CanvasPanel'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { UserMenu } from '@/components/auth/UserMenu'
 import { GuestSaveModal } from '@/components/auth/GuestSaveModal'
+import { ShareModal } from '@/components/collaboration/ShareModal'
 
 interface Props {
   userId: string | null
@@ -16,6 +17,7 @@ interface Props {
 
 export function HomeClient({ userId, userName, userImage }: Props) {
   const [showGuestModal, setShowGuestModal] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const [view, setView] = useState<'dashboard' | 'planner'>('dashboard')
   const [presentationMode, setPresentationMode] = useState<'overview' | 'edit'>('edit')
 
@@ -43,7 +45,45 @@ export function HomeClient({ userId, userName, userImage }: Props) {
     deleteSavedTrip,
     retry,
     savedTripIsPublished,
+    tripRole,
+    collaborators,
+    collaboratorsCanManage,
+    isLoadingCollaborators,
+    loadCollaborators,
+    inviteCollaborator,
+    setCollaboratorRole,
+    removeCollaborator,
+    leaveSharedTrip,
+    comments,
+    addComment,
+    toggleCommentResolved,
+    deleteComment,
+    dayLocks,
+    aiLock,
+    presence,
+    heldDay,
+    isCollaborativeTrip,
+    acquireDayLock,
   } = useChat(userId)
+
+  // null role = a brand-new trip the current user is creating (full access).
+  const canEdit = tripRole == null || tripRole === 'owner' || tripRole === 'editor'
+  const canManage = tripRole == null || tripRole === 'owner'
+  const canComment = tripRole !== 'viewer'
+  const aiLockedByOther = Boolean(aiLock && aiLock.userId !== userId)
+  const chatDisabledNote = aiLockedByOther
+    ? `${aiLock?.userName ?? 'Someone'} is updating with AI…`
+    : !canEdit
+      ? tripRole === 'commenter'
+        ? 'Comment-only access — AI editing is off.'
+        : 'View-only access — AI editing is off.'
+      : null
+
+  function handleManageCollaborators() {
+    if (!savedTripId) return
+    void loadCollaborators(savedTripId)
+    setShowShareModal(true)
+  }
 
   function handleSave() {
     if (!userId) {
@@ -93,6 +133,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
             onNewTrip={handleNewTrip}
             onOpenTrip={handleOpenTrip}
             onDeleteTrip={deleteSavedTrip}
+            onLeaveTrip={leaveSharedTrip}
           />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
@@ -103,6 +144,7 @@ export function HomeClient({ userId, userName, userImage }: Props) {
                 onSend={sendMessage}
                 hasItinerary={Boolean(itinerary)}
                 onBackToDashboard={handleBackToDashboard}
+                chatDisabledNote={chatDisabledNote}
               />
             )}
             <CanvasPanel
@@ -120,13 +162,28 @@ export function HomeClient({ userId, userName, userImage }: Props) {
               saveStatus={saveStatus}
               saveError={saveError}
               presentationMode={presentationMode}
+              role={tripRole ?? undefined}
+              canManage={canManage}
+              onManageCollaborators={canManage && savedTripId ? handleManageCollaborators : undefined}
+              comments={comments}
+              currentUserId={userId}
+              canComment={canComment}
+              onAddComment={canComment ? addComment : undefined}
+              onToggleCommentResolved={toggleCommentResolved}
+              onDeleteComment={deleteComment}
+              dayLocks={dayLocks}
+              aiLock={aiLock}
+              presence={presence}
+              heldDay={heldDay}
+              lockingEnabled={isCollaborativeTrip}
+              onActiveDayChange={acquireDayLock}
               onSetup={submitSetup}
               onSend={sendMessage}
-              onUpdateItinerary={updateItinerary}
+              onUpdateItinerary={canEdit ? updateItinerary : undefined}
               onSave={handleSave}
               onOpenSavedTrip={handleOpenTrip}
-              onRenameSavedTrip={renameSavedTripTitle}
-              onPublishSavedTrip={updateSavedTripPublishStatus}
+              onRenameSavedTrip={canEdit ? renameSavedTripTitle : undefined}
+              onPublishSavedTrip={canManage ? updateSavedTripPublishStatus : undefined}
               onPresentationModeChange={setPresentationMode}
               onBackToDashboard={handleBackToDashboard}
               onRetry={retry}
@@ -139,6 +196,20 @@ export function HomeClient({ userId, userName, userImage }: Props) {
         <GuestSaveModal
           onClose={() => setShowGuestModal(false)}
           onSave={() => void saveCurrentTrip()}
+        />
+      )}
+
+      {showShareModal && (
+        <ShareModal
+          title={savedTripTitle ?? itinerary?.trip.destination ?? 'This trip'}
+          collaborators={collaborators}
+          canManage={collaboratorsCanManage}
+          isLoading={isLoadingCollaborators}
+          currentUserId={userId}
+          onInvite={inviteCollaborator}
+          onSetRole={setCollaboratorRole}
+          onRemove={removeCollaborator}
+          onClose={() => setShowShareModal(false)}
         />
       )}
     </>

@@ -11,9 +11,10 @@ interface Props {
   onSend: (text: string) => void
   hasItinerary?: boolean
   onBackToDashboard?: () => void
+  chatDisabledNote?: string | null
 }
 
-export function ChatPanel({ messages, isLoading, onSend, hasItinerary = false, onBackToDashboard }: Props) {
+export function ChatPanel({ messages, isLoading, onSend, hasItinerary = false, onBackToDashboard, chatDisabledNote }: Props) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isMobileLarge, setIsMobileLarge] = useState(false)
@@ -56,7 +57,7 @@ export function ChatPanel({ messages, isLoading, onSend, hasItinerary = false, o
       </div>
 
       <MessageList messages={messages} isLoading={isLoading} />
-      <ChatInput onSend={onSend} disabled={isLoading} hasItinerary={hasItinerary} />
+      <ChatInput onSend={onSend} disabled={isLoading || Boolean(chatDisabledNote)} hasItinerary={hasItinerary} note={chatDisabledNote} />
     </div>
   )
 
@@ -193,7 +194,7 @@ export function ChatPanel({ messages, isLoading, onSend, hasItinerary = false, o
       </div>
 
       <MessageList messages={messages} isLoading={isLoading} />
-      <ChatInput onSend={onSend} disabled={isLoading} hasItinerary={hasItinerary} />
+      <ChatInput onSend={onSend} disabled={isLoading || Boolean(chatDisabledNote)} hasItinerary={hasItinerary} note={chatDisabledNote} />
     </div>
   )
 }

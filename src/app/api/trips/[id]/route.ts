@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getClient } from '@/lib/db'
 import { auth } from '@/auth'
-import type { Itinerary, Message, TripStyle } from '@/types/travel'
+import { getTripAccess, canEdit, canManage } from '@/lib/tripAccess'
+import type { CollaboratorRole, Itinerary, Message, TripStyle } from '@/types/travel'
 
 interface TripRow {
   id: string
@@ -17,9 +18,13 @@ interface TripRow {
   messages: Message[] | null
   is_published?: boolean | null
   published_at?: Date | null
+  version?: string | number | null
+  updated_by?: string | null
   created_at: Date
   updated_at: Date
 }
+
+type SummaryRow = Omit<TripRow, 'itinerary' | 'messages'>
 
 interface RenameTripBody {
   ownerId?: string
@@ -27,7 +32,10 @@ interface RenameTripBody {
   isPublished?: unknown
 }
 
-function serializeRow(row: TripRow) {
+const SUMMARY_COLS = `id, owner_id, title, destination, start_date, end_date, travelers, style, summary,
+                      is_published, published_at, version, updated_by, created_at, updated_at`
+
+function serializeRow(row: TripRow, role: CollaboratorRole) {
   return {
     id: row.id,
     title: row.title,
@@ -43,10 +51,12 @@ function serializeRow(row: TripRow) {
     publishedAt: row.published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    version: Number(row.version ?? 1),
+    role,
   }
 }
 
-function serializeRowSummary(row: Omit<TripRow, 'itinerary' | 'messages'>) {
+function serializeRowSummary(row: SummaryRow, role: CollaboratorRole) {
   return {
     id: row.id,
     title: row.title,
@@ -60,6 +70,8 @@ function serializeRowSummary(row: Omit<TripRow, 'itinerary' | 'messages'>) {
     publishedAt: row.published_at?.toISOString() ?? null,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    version: Number(row.version ?? 1),
+    role,
   }
 }
 
@@ -73,20 +85,21 @@ export async function GET(
   }
 
   const { id } = await context.params
-  const ownerId = session.user.id
+  const userId = session.user.id
 
   const client = await getClient()
   try {
-    const { rows } = await client.query<TripRow>(
-      'SELECT * FROM trips WHERE id = $1 AND owner_id = $2',
-      [id, ownerId]
-    )
+    const access = await getTripAccess(client, id, userId)
+    if (!access) {
+      return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
+    }
 
+    const { rows } = await client.query<TripRow>('SELECT * FROM trips WHERE id = $1', [id])
     if (rows.length === 0) {
       return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
     }
 
-    return NextResponse.json({ trip: serializeRow(rows[0]) })
+    return NextResponse.json({ trip: serializeRow(rows[0], access.role) })
   } catch (err) {
     console.error('Get trip error:', err)
     return NextResponse.json({ error: 'Unable to load this trip.' }, { status: 500 })
@@ -105,19 +118,28 @@ export async function DELETE(
   }
 
   const { id } = await context.params
-  const ownerId = session.user.id
+  const userId = session.user.id
 
   const client = await getClient()
   try {
-    const { rowCount } = await client.query(
-      'DELETE FROM trips WHERE id = $1 AND owner_id = $2',
-      [id, ownerId]
-    )
-
-    if (!rowCount) {
+    const access = await getTripAccess(client, id, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
     }
+    if (access.role !== 'owner') {
+      return NextResponse.json({ error: 'Only the owner can delete this trip.' }, { status: 403 })
+    }
 
+    // DSQL has no cascading deletes (no REFERENCES); remove dependent rows.
+    for (const table of ['trip_collaborators', 'trip_comments', 'trip_locks', 'trip_presence']) {
+      try {
+        await client.query(`DELETE FROM ${table} WHERE trip_id = $1`, [id])
+      } catch (err) {
+        console.error(`Cleanup of ${table} failed during trip delete:`, err)
+      }
+    }
+
+    await client.query('DELETE FROM trips WHERE id = $1', [id])
     return NextResponse.json({ id })
   } catch (err) {
     console.error('Delete trip error:', err)
@@ -137,83 +159,71 @@ export async function PATCH(
   }
 
   const { id } = await context.params
-  const { ownerId, title, isPublished }: RenameTripBody = await req.json()
-  const sessionOwnerId = session.user.id
-
-  if (ownerId && ownerId !== sessionOwnerId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const userId = session.user.id
+  const { title, isPublished }: RenameTripBody = await req.json()
 
   if (typeof title === 'undefined' && typeof isPublished === 'undefined') {
     return NextResponse.json({ error: 'No trip updates provided.' }, { status: 400 })
   }
-
   if (typeof isPublished !== 'undefined' && typeof isPublished !== 'boolean') {
     return NextResponse.json({ error: 'isPublished must be a boolean.' }, { status: 400 })
   }
 
-  if (typeof title === 'undefined') {
-    const client = await getClient()
-    try {
-      const now = new Date()
-      const { rows } = await client.query<Omit<TripRow, 'itinerary' | 'messages'>>(
-        `UPDATE trips
-         SET is_published = $1, published_at = CASE WHEN $1 THEN COALESCE(published_at, $2) ELSE NULL END, updated_at = $2
-         WHERE id = $3 AND owner_id = $4
-         RETURNING id, owner_id, title, destination, start_date, end_date, travelers, style, summary,
-                   is_published, published_at, created_at, updated_at`,
-        [isPublished, now, id, sessionOwnerId]
-      )
-
-      if (rows.length === 0) {
-        return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
-      }
-
-      return NextResponse.json({ trip: serializeRowSummary(rows[0]) })
-    } catch (err) {
-      console.error('Publish trip error:', err)
-      return NextResponse.json({ error: 'Unable to update gallery publishing.' }, { status: 500 })
-    } finally {
-      await client.end()
-    }
-  }
-
-  if (!ownerId) {
-    return NextResponse.json({ error: 'ownerId is required.' }, { status: 400 })
-  }
-
-  if (typeof title !== 'string') {
-    return NextResponse.json({ error: 'title is required.' }, { status: 400 })
-  }
-
-  const cleanTitle = title.trim()
-  if (!cleanTitle) {
-    return NextResponse.json({ error: 'title cannot be empty.' }, { status: 400 })
-  }
-
-  if (cleanTitle.length > 120) {
-    return NextResponse.json({ error: 'title is too long.' }, { status: 400 })
-  }
-
   const client = await getClient()
   try {
-    const { rows } = await client.query<Omit<TripRow, 'itinerary' | 'messages'>>(
-      `UPDATE trips
-       SET title = $1, updated_at = $2
-       WHERE id = $3 AND owner_id = $4
-       RETURNING id, owner_id, title, destination, start_date, end_date, travelers, style, summary,
-                 is_published, published_at, created_at, updated_at`,
-      [cleanTitle, new Date(), id, sessionOwnerId]
-    )
-
-    if (rows.length === 0) {
+    const access = await getTripAccess(client, id, userId)
+    if (!access) {
       return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
     }
 
-    return NextResponse.json({ trip: serializeRowSummary(rows[0]) })
+    // Publish toggle — owner only.
+    if (typeof title === 'undefined') {
+      if (!canManage(access.role)) {
+        return NextResponse.json({ error: 'Only the owner can publish this trip.' }, { status: 403 })
+      }
+      const now = new Date()
+      const { rows } = await client.query<SummaryRow>(
+        `UPDATE trips
+         SET is_published = $1, published_at = CASE WHEN $1 THEN COALESCE(published_at, $2) ELSE NULL END, updated_at = $2
+         WHERE id = $3
+         RETURNING ${SUMMARY_COLS}`,
+        [isPublished, now, id]
+      )
+      if (rows.length === 0) {
+        return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
+      }
+      return NextResponse.json({ trip: serializeRowSummary(rows[0], access.role) })
+    }
+
+    // Rename — owner or editor.
+    if (!canEdit(access.role)) {
+      return NextResponse.json({ error: 'You do not have permission to rename this trip.' }, { status: 403 })
+    }
+    if (typeof title !== 'string') {
+      return NextResponse.json({ error: 'title is required.' }, { status: 400 })
+    }
+    const cleanTitle = title.trim()
+    if (!cleanTitle) {
+      return NextResponse.json({ error: 'title cannot be empty.' }, { status: 400 })
+    }
+    if (cleanTitle.length > 120) {
+      return NextResponse.json({ error: 'title is too long.' }, { status: 400 })
+    }
+
+    const { rows } = await client.query<SummaryRow>(
+      `UPDATE trips
+       SET title = $1, updated_at = $2
+       WHERE id = $3
+       RETURNING ${SUMMARY_COLS}`,
+      [cleanTitle, new Date(), id]
+    )
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
+    }
+    return NextResponse.json({ trip: serializeRowSummary(rows[0], access.role) })
   } catch (err) {
-    console.error('Rename trip error:', err)
-    return NextResponse.json({ error: 'Unable to rename this trip.' }, { status: 500 })
+    console.error('Update trip error:', err)
+    return NextResponse.json({ error: 'Unable to update this trip.' }, { status: 500 })
   } finally {
     await client.end()
   }
