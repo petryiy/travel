@@ -1,7 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizeItineraryMapData } from '@/lib/itineraryMap'
-import type { Itinerary, Message, TripDetails } from '@/types/travel'
+import { getInclusiveTripDates } from '@/lib/tripDates'
+import type { GeminiResponse, Itinerary, Message, TripDetails } from '@/types/travel'
+
+const INITIAL_GENERATION_CHUNK_DAYS = 7
 
 const SYSTEM_PROMPT = `You are an expert travel planning assistant. Your job is to help users plan detailed, personalized travel itineraries.
 
@@ -32,9 +35,9 @@ Response schema:
               "startTime": "09:30",
               "endTime": "11:00",
               "durationMinutes": 90,
-              "travelFromPrevious": { "mode": "transit|walk|taxi|rideshare|train|bus|ferry|flight|other", "durationMinutes": 25, "description": "25 min by metro from the previous stop", "routeName": "T4 / Bus 333 / L2", "cost": "Approx. $4", "recommended": true } | null,
+              "travelFromPrevious": { "mode": "transit|walk|taxi|rideshare|train|light_rail|bus|ferry|flight|other", "durationMinutes": 25, "description": "25 min by metro from the previous stop", "routeName": "T4 / Bus 333 / L2", "cost": "Approx. $4", "recommended": true } | null,
               "travelOptions": [
-                { "mode": "transit|walk|taxi|rideshare|train|bus|ferry|flight|other", "durationMinutes": 25, "description": "Take L2 light rail to Circular Quay, then walk 6 min", "routeName": "L2 + walk", "cost": "Approx. $4", "recommended": true }
+                { "mode": "transit|walk|taxi|rideshare|train|light_rail|bus|ferry|flight|other", "durationMinutes": 25, "description": "Take L2 light rail to Circular Quay, then walk 6 min", "routeName": "L2 + walk", "cost": "Approx. $4", "recommended": true }
               ] | null,
               "isFixedTime": false,
               "title": "Activity name",
@@ -285,18 +288,78 @@ function parseModelJson(raw: string) {
   }
 }
 
+function dateChunks(dates: string[], size: number) {
+  const chunks: string[][] = []
+  for (let index = 0; index < dates.length; index += size) {
+    chunks.push(dates.slice(index, index + size))
+  }
+  return chunks
+}
+
+function missingItineraryDates(itinerary: Itinerary, requiredDates: string[]) {
+  const returnedDates = new Set(itinerary.days.map((day) => day.date))
+  return requiredDates.filter((date) => !returnedDates.has(date))
+}
+
+function mergeInitialResponses(responses: GeminiResponse[], tripDetails: TripDetails, requiredDates: string[]): GeminiResponse {
+  const itineraries = responses
+    .map((response) => response.canvas.itinerary)
+    .filter((itinerary): itinerary is Itinerary => Boolean(itinerary))
+
+  if (itineraries.length !== responses.length || itineraries.length === 0) {
+    throw new Error('A long-trip generation chunk did not contain an itinerary.')
+  }
+
+  const daysByDate = new Map(itineraries.flatMap((itinerary) => itinerary.days).map((day) => [day.date, day]))
+  const missingDates = requiredDates.filter((date) => !daysByDate.has(date))
+  if (missingDates.length > 0) {
+    throw new Error(`Long-trip generation omitted dates: ${missingDates.join(', ')}`)
+  }
+
+  const first = itineraries[0]
+  const merged: Itinerary = {
+    ...first,
+    trip: { ...first.trip, ...tripDetails },
+    summary: itineraries.map((itinerary) => itinerary.summary).filter(Boolean).join(' '),
+    days: requiredDates.map((date, index) => ({ ...daysByDate.get(date)!, day: index + 1, date })),
+    tips: Array.from(new Set(itineraries.flatMap((itinerary) => itinerary.tips ?? []))).slice(0, 10),
+  }
+
+  return {
+    message: `I've put together your complete ${requiredDates.length}-day itinerary for ${tripDetails.destination}, with every date planned from ${tripDetails.startDate} through ${tripDetails.endDate}.`,
+    canvas: {
+      type: 'itinerary',
+      clarification: null,
+      itinerary: normalizeItineraryMapData(merged),
+    },
+  }
+}
+
 function buildUserPrompt(
   latestMessage: string,
   tripDetails?: TripDetails,
-  currentItinerary?: Itinerary | null
+  currentItinerary?: Itinerary | null,
+  requiredDates?: string[]
 ) {
   if (!currentItinerary) {
+    const allDates = tripDetails ? getInclusiveTripDates(tripDetails.startDate, tripDetails.endDate) : []
+    const datesToGenerate = requiredDates ?? allDates
+    const chunkStart = datesToGenerate.length > 0 ? allDates.indexOf(datesToGenerate[0]) + 1 : 0
+    const chunkEnd = chunkStart > 0 ? chunkStart + datesToGenerate.length - 1 : 0
     return [
       latestMessage,
       '',
       tripDetails ? `TRIP_DETAILS_JSON: ${JSON.stringify(tripDetails)}` : '',
+      allDates.length > 0 ? `INCLUSIVE_TRIP_DAY_COUNT: ${allDates.length}` : '',
+      datesToGenerate.length > 0 ? `REQUIRED_DAY_DATES_JSON: ${JSON.stringify(datesToGenerate)}` : '',
       '',
       'Use these trip details to create the itinerary. Return JSON only, using the required response schema.',
+      datesToGenerate.length > 0
+        ? `Return exactly ${datesToGenerate.length} day objects, one for every date in REQUIRED_DAY_DATES_JSON, in that exact order. Do not omit, combine, summarize, sample, or add dates.`
+        : '',
+      requiredDates && allDates.length !== requiredDates.length
+        ? `This is one server-managed chunk covering day positions ${chunkStart}-${chunkEnd} of the full ${allDates.length}-day trip. Generate exactly and only the requested dates; keep trip.startDate and trip.endDate as the full trip range. Treat this as the middle or end of the same journey when applicable, not as a new standalone trip, and distribute major attractions appropriately for these day positions.`
+        : '',
     ].filter(Boolean).join('\n')
   }
 
@@ -326,6 +389,7 @@ export async function POST(req: NextRequest) {
       systemInstruction: SYSTEM_PROMPT,
       generationConfig: {
         responseMimeType: 'application/json',
+        maxOutputTokens: 65536,
       },
     })
 
@@ -336,16 +400,39 @@ export async function POST(req: NextRequest) {
 
     const lastMessage = messages[messages.length - 1]
 
-    const chat = model.startChat({ history })
-    const result = await chat.sendMessage(buildUserPrompt(lastMessage.content, tripDetails, currentItinerary))
-    const raw = result.response.text()
+    const requestModel = async (prompt: string) => {
+      const chat = model.startChat({ history })
+      const result = await chat.sendMessage(prompt)
+      return parseModelJson(result.response.text()) as GeminiResponse
+    }
 
-    const parsed = parseModelJson(raw)
+    const requiredDates = !currentItinerary && tripDetails
+      ? getInclusiveTripDates(tripDetails.startDate, tripDetails.endDate)
+      : []
+
+    let parsed: GeminiResponse
+    if (!currentItinerary && tripDetails && requiredDates.length > INITIAL_GENERATION_CHUNK_DAYS) {
+      const responses = await Promise.all(
+        dateChunks(requiredDates, INITIAL_GENERATION_CHUNK_DAYS).map((chunk) => (
+          requestModel(buildUserPrompt(lastMessage.content, tripDetails, null, chunk))
+        ))
+      )
+      parsed = mergeInitialResponses(responses, tripDetails, requiredDates)
+    } else {
+      parsed = await requestModel(buildUserPrompt(lastMessage.content, tripDetails, currentItinerary, requiredDates))
+    }
 
     // Merge tripDetails into itinerary if Gemini omitted it, then derive reliable map markers.
     if (parsed.canvas?.type === 'itinerary' && parsed.canvas.itinerary) {
       if (tripDetails) {
-        parsed.canvas.itinerary.trip = { ...tripDetails, ...parsed.canvas.itinerary.trip }
+        parsed.canvas.itinerary.trip = { ...parsed.canvas.itinerary.trip, ...tripDetails }
+      }
+
+      if (!currentItinerary && requiredDates.length > 0) {
+        const missingDates = missingItineraryDates(parsed.canvas.itinerary, requiredDates)
+        if (parsed.canvas.itinerary.days.length !== requiredDates.length || missingDates.length > 0) {
+          throw new Error(`Initial itinerary is incomplete. Missing dates: ${missingDates.join(', ') || 'unknown'}`)
+        }
       }
 
       parsed.canvas.itinerary = removeDuplicateBookedActivity(parsed.canvas.itinerary, lastMessage.content)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
+import { getInclusiveTripDayCount } from '@/lib/tripDates'
 import type { SavedTripSummary, TripDetails, TripStyle } from '@/types/travel'
 
 const STYLES: { value: TripStyle; label: string; emoji: string; desc: string }[] = [
@@ -27,10 +28,11 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
   const [style, setStyle] = useState<TripStyle>('mixed')
   const [dailyStartTime, setDailyStartTime] = useState('09:00')
   const [dailyEndTime, setDailyEndTime] = useState('21:00')
+  const selectedDayCount = getInclusiveTripDayCount(startDate, endDate)
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!destination.trim() || !startDate || !endDate || dailyStartTime >= dailyEndTime) return
+    if (!destination.trim() || !startDate || !endDate || selectedDayCount === 0 || dailyStartTime >= dailyEndTime) return
     onSubmit({
       destination: destination.trim(),
       accommodationLocation: accommodationLocation.trim() || undefined,
@@ -110,6 +112,11 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
               />
             </div>
           </div>
+          {startDate && endDate && selectedDayCount > 0 && (
+            <p className="-mt-2 text-xs font-semibold text-[#6f8a68] sm:text-indigo-600">
+              {selectedDayCount} {selectedDayCount === 1 ? 'day' : 'days'} selected
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
@@ -196,7 +203,7 @@ export function SetupForm({ savedTrips, isLoadingSavedTrips, onSubmit, onOpenSav
 
           <button
             type="submit"
-            disabled={!destination.trim() || !startDate || !endDate || dailyStartTime >= dailyEndTime}
+            disabled={!destination.trim() || !startDate || !endDate || selectedDayCount === 0 || dailyStartTime >= dailyEndTime}
             className="w-full rounded-xl bg-[#5f7d59] py-3.5 text-sm font-semibold text-white transition hover:bg-[#4f6b49] disabled:opacity-40 sm:bg-indigo-600 sm:py-3 sm:hover:bg-indigo-700"
           >
             Start planning →

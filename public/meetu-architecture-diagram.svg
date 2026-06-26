@@ -1,0 +1,207 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120" role="img" aria-labelledby="title desc">
+  <title id="title">MeetU application architecture diagram</title>
+  <desc id="desc">Architecture diagram showing users connecting to a Vercel-hosted Next.js app, Vercel API routes, AWS Aurora DSQL PostgreSQL-compatible database, Google Gemini API, Google Maps Platform, Google OAuth, and browser localStorage.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbfaf7"/>
+      <stop offset="1" stop-color="#f3efe6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#3f3428" flood-opacity="0.12"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#3f3428" flood-opacity="0.10"/>
+    </filter>
+    <pattern id="paperDots" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#d9cdb9" opacity="0.38"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b8377"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6d8b67"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5d7fa5"/>
+    </marker>
+    <style>
+      .title { font-family: Georgia, 'Times New Roman', serif; font-size: 54px; font-weight: 700; fill: #2f261f; letter-spacing: -0.5px; }
+      .subtitle { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 19px; fill: #776b5f; }
+      .group-label { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; font-weight: 800; fill: #8c7c69; letter-spacing: 3px; text-transform: uppercase; }
+      .box-title { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 24px; font-weight: 800; fill: #302821; }
+      .box-subtitle { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 17px; font-weight: 600; fill: #6f6255; }
+      .box-note { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; fill: #7e7368; }
+      .tiny { font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; fill: #8c8177; }
+      .arrow { fill: none; stroke: #8b8377; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .arrow-blue { fill: none; stroke: #5d7fa5; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowBlue); }
+      .arrow-green { fill: none; stroke: #6d8b67; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowGreen); }
+      .arrow-dashed { fill: none; stroke: #9b9288; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 9 9; marker-end: url(#arrow); }
+      .arrow-bi { fill: none; stroke: #6d8b67; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-start: url(#arrowGreen); marker-end: url(#arrowGreen); }
+      .icon-line { fill: none; stroke: currentColor; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1120" rx="0" fill="url(#page)"/>
+  <rect width="1800" height="1120" fill="url(#paperDots)" opacity="0.55"/>
+
+  <g transform="translate(80 62)">
+    <text class="group-label" x="0" y="0">MEETU ARCHITECTURE</text>
+    <text class="title" x="0" y="64">AI travel agent on Vercel + AWS database</text>
+    <text class="subtitle" x="0" y="104">Front end, API routes, database, authentication, AI, maps, sharing, exports, and Footprints memory flow.</text>
+  </g>
+
+  <!-- Users -->
+  <g filter="url(#softShadow)" transform="translate(84 252)">
+    <rect width="250" height="142" rx="28" fill="#f7f5f0" stroke="#d2c7b8" stroke-width="3"/>
+    <g transform="translate(28 34)" color="#6d8b67">
+      <rect x="0" y="10" width="72" height="48" rx="10" fill="#e7efe3" stroke="#9db595" stroke-width="3"/>
+      <path class="icon-line" d="M16 76h40M36 58v18"/>
+    </g>
+    <text class="box-title" x="118" y="50">Users</text>
+    <text class="box-subtitle" x="118" y="80">Web &amp; mobile</text>
+    <text class="box-note" x="118" y="108">Plan, save, share</text>
+  </g>
+
+  <!-- Vercel group -->
+  <g transform="translate(430 200)">
+    <rect width="560" height="420" rx="34" fill="#eef5fc" stroke="#b8cfe5" stroke-width="3" stroke-dasharray="10 10"/>
+    <text class="group-label" x="34" y="44" fill="#597da3">VERCEL HOSTING</text>
+
+    <g filter="url(#softShadow)" transform="translate(42 76)">
+      <rect width="220" height="118" rx="24" fill="#ffffff" stroke="#b6cce2" stroke-width="3"/>
+      <text class="box-title" x="26" y="43">Vercel Edge</text>
+      <text class="box-subtitle" x="26" y="73">CDN + routing</text>
+      <text class="box-note" x="26" y="98">TLS, static assets</text>
+    </g>
+
+    <g filter="url(#softShadow)" transform="translate(300 76)">
+      <rect width="220" height="118" rx="24" fill="#ffffff" stroke="#b6cce2" stroke-width="3"/>
+      <text class="box-title" x="26" y="43">Next.js UI</text>
+      <text class="box-subtitle" x="26" y="73">React app</text>
+      <text class="box-note" x="26" y="98">Dashboard, editor, gallery</text>
+    </g>
+
+    <g filter="url(#softShadow)" transform="translate(42 246)">
+      <rect width="478" height="130" rx="26" fill="#fbfdff" stroke="#a8c4df" stroke-width="3"/>
+      <text class="box-title" x="26" y="45">Next.js API Routes</text>
+      <text class="box-subtitle" x="26" y="77">Application logic</text>
+      <text class="box-note" x="26" y="103">/api/chat, /api/trips, /api/routes, /api/check-hours, /api/maps/static</text>
+    </g>
+  </g>
+
+  <!-- Auth -->
+  <g filter="url(#softShadow)" transform="translate(1086 210)">
+    <rect width="300" height="154" rx="28" fill="#fff4ef" stroke="#dfb9a8" stroke-width="3"/>
+    <text class="box-title" x="28" y="50">NextAuth</text>
+    <text class="box-subtitle" x="28" y="82">Auth service</text>
+    <text class="box-note" x="28" y="111">Google OAuth + credentials</text>
+    <text class="box-note" x="28" y="134">JWT/session handling</text>
+  </g>
+
+  <!-- Google services -->
+  <g transform="translate(1086 438)">
+    <rect width="604" height="322" rx="34" fill="#f3f0ff" stroke="#c8bee9" stroke-width="3" stroke-dasharray="10 10"/>
+    <text class="group-label" x="34" y="44">GOOGLE SERVICES</text>
+
+    <g filter="url(#softShadow)" transform="translate(34 76)">
+      <rect width="252" height="104" rx="24" fill="#ffffff" stroke="#c9bee8" stroke-width="3"/>
+      <text class="box-title" x="24" y="42">Gemini API</text>
+      <text class="box-subtitle" x="24" y="72">AI travel agent</text>
+      <text class="box-note" x="24" y="94">Plans, edits, captions</text>
+    </g>
+
+    <g filter="url(#softShadow)" transform="translate(318 76)">
+      <rect width="252" height="104" rx="24" fill="#ffffff" stroke="#c9bee8" stroke-width="3"/>
+      <text class="box-title" x="24" y="42">Google Maps</text>
+      <text class="box-subtitle" x="24" y="72">Maps Platform APIs</text>
+      <text class="box-note" x="24" y="94">JS, Places, Directions, Static</text>
+    </g>
+
+    <g filter="url(#softShadow)" transform="translate(178 206)">
+      <rect width="252" height="74" rx="22" fill="#ffffff" stroke="#c9bee8" stroke-width="3"/>
+      <text class="box-title" x="24" y="44">Google OAuth</text>
+    </g>
+  </g>
+
+  <!-- AWS group -->
+  <g transform="translate(430 714)">
+    <rect width="560" height="240" rx="34" fill="#edf8f0" stroke="#b9d5bf" stroke-width="3" stroke-dasharray="10 10"/>
+    <text class="group-label" x="34" y="44">AWS DATABASE LAYER</text>
+
+    <g filter="url(#shadow)" transform="translate(42 82)">
+      <rect width="478" height="118" rx="28" fill="#ffffff" stroke="#9ec49f" stroke-width="3"/>
+      <g transform="translate(28 31)" color="#6d8b67">
+        <ellipse cx="36" cy="10" rx="34" ry="10" fill="#e3efdf" stroke="#7fa077" stroke-width="3"/>
+        <path class="icon-line" d="M2 10v38c0 6 15 11 34 11s34-5 34-11V10"/>
+        <path class="icon-line" d="M2 30c0 6 15 11 34 11s34-5 34-11"/>
+      </g>
+      <text class="box-title" x="120" y="42">Aurora DSQL / PostgreSQL</text>
+      <text class="box-subtitle" x="120" y="73">Primary persistent data store</text>
+      <text class="box-note" x="120" y="101">users, sessions, trips, itinerary JSON, publish status</text>
+    </g>
+  </g>
+
+  <!-- Browser local storage -->
+  <g filter="url(#softShadow)" transform="translate(1086 826)">
+    <rect width="300" height="128" rx="28" fill="#fff8e8" stroke="#e0c78e" stroke-width="3"/>
+    <text class="box-title" x="28" y="48">Browser localStorage</text>
+    <text class="box-subtitle" x="28" y="78">Footprints MVP</text>
+    <text class="box-note" x="28" y="104">Memory pins, notes, photos</text>
+  </g>
+
+  <!-- Client feature strip -->
+  <g transform="translate(84 810)">
+    <rect width="250" height="144" rx="28" fill="#fffdf8" stroke="#d2c7b8" stroke-width="3" filter="url(#softShadow)"/>
+    <text class="box-title" x="28" y="42">Client features</text>
+    <text class="box-note" x="28" y="73">Dashboard / Editor</text>
+    <text class="box-note" x="28" y="97">Overview / Share / Gallery</text>
+    <text class="box-note" x="28" y="121">PDF, poster, Footprints</text>
+  </g>
+
+  <!-- Arrows -->
+  <path class="arrow-blue" d="M334 323 C370 323 390 323 430 323"/>
+  <text class="tiny" x="360" y="304">HTTPS</text>
+
+  <path class="arrow-blue" d="M692 335 C728 335 724 335 730 335"/>
+  <path class="arrow-blue" d="M772 323 C802 323 818 323 856 323"/>
+
+  <path class="arrow-blue" d="M710 394 L710 446"/>
+  <text class="tiny" x="728" y="426">page actions</text>
+
+  <path class="arrow" d="M990 514 C1028 514 1048 486 1086 486"/>
+  <text class="tiny" x="1002" y="482">AI requests</text>
+
+  <path class="arrow" d="M990 550 C1038 550 1046 550 1086 550"/>
+  <text class="tiny" x="1000" y="576">map + route calls</text>
+
+  <path class="arrow" d="M1236 364 C1236 390 1236 412 1264 644"/>
+  <text class="tiny" x="1252" y="398">OAuth redirect</text>
+
+  <path class="arrow" d="M1086 288 C1036 288 1034 302 990 456"/>
+  <text class="tiny" x="1012" y="288">auth state</text>
+
+  <path class="arrow-bi" d="M686 620 C686 668 686 690 686 714"/>
+  <text class="tiny" x="706" y="672">save/load trips</text>
+
+  <path class="arrow-bi" d="M1086 292 C1036 292 1016 754 990 800"/>
+  <text class="tiny" x="1002" y="748">user/session records</text>
+
+  <path class="arrow-dashed" d="M856 620 C910 680 1018 808 1086 876"/>
+  <text class="tiny" x="938" y="757">Footprints memory data</text>
+
+  <path class="arrow" d="M198 810 C270 728 322 668 430 534"/>
+  <text class="tiny" x="238" y="720">UI actions</text>
+
+  <!-- Footer / legend -->
+  <g transform="translate(80 1012)">
+    <rect width="1640" height="68" rx="22" fill="#f7f3ec" stroke="#d6cab8" stroke-width="2"/>
+    <text class="box-subtitle" x="28" y="42">Legend</text>
+    <line x1="124" y1="36" x2="180" y2="36" class="arrow"/>
+    <text class="tiny" x="194" y="41">one-way API call</text>
+    <line x1="340" y1="36" x2="396" y2="36" class="arrow-bi"/>
+    <text class="tiny" x="412" y="41">read/write data flow</text>
+    <line x1="604" y1="36" x2="660" y2="36" class="arrow-dashed"/>
+    <text class="tiny" x="676" y="41">current MVP local browser storage</text>
+    <text class="tiny" x="1030" y="41">Frontend deployed on Vercel. Persistent trip data stored in AWS PostgreSQL-compatible database.</text>
+  </g>
+</svg>

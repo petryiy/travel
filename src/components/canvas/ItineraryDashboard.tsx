@@ -134,6 +134,7 @@ const MODE_LABELS: Record<TravelOption['mode'], string> = {
   taxi: 'Taxi',
   rideshare: 'Rideshare',
   train: 'Train',
+  light_rail: 'Light rail',
   bus: 'Bus',
   ferry: 'Ferry',
   flight: 'Flight',
@@ -146,6 +147,7 @@ const MODE_BADGES: Record<TravelOption['mode'], string> = {
   taxi: 'TX',
   rideshare: 'RS',
   train: 'TR',
+  light_rail: 'LR',
   bus: 'BU',
   ferry: 'FY',
   flight: 'FL',
@@ -640,13 +642,11 @@ function TransitSegmentRow({ previous, current, currentIndex, option, status, on
           {MODE_BADGES[option.mode]}
         </span>
         <span className="min-w-0 truncate text-[11px] font-semibold text-[#75624c] transition group-hover:text-[#2f2419]">
-          {MODE_LABELS[option.mode]} · {option.routeName ?? `to stop ${currentIndex + 1}`} · {formatMinutes(option.durationMinutes)}
+          {MODE_LABELS[option.mode]} · {option.routeName ?? `to stop ${currentIndex + 1}`} · {option.source === 'google' ? '' : '~'}{formatMinutes(option.durationMinutes)}
         </span>
-        {option.source === 'google' && (
-          <span className="hidden shrink-0 rounded-full bg-[#f1eadf] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#9a876f] sm:inline">
-            Google
-          </span>
-        )}
+        <span className="hidden shrink-0 rounded-full bg-[#f1eadf] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#9a876f] sm:inline">
+          {option.source === 'google' ? 'Google' : 'Estimate'}
+        </span>
         {statusText && (
           <span className={`hidden shrink-0 text-[10px] font-semibold sm:inline ${hasConflict ? 'text-amber-700' : 'text-[#6f8a68]'}`}>
             {statusText}
@@ -1481,7 +1481,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Route options</p>
                         {selectedTravelOptions.length > 0 && (
                           <span className="text-[10px] font-bold text-[#8a7965]">
-                            {selectedTravelOptions.some((option) => option.source === 'google') ? 'Google routes' : `Top ${selectedTravelOptions.length}`}
+                            {selectedTravelOptions.some((option) => option.source === 'google') ? 'Google schedule' : 'AI estimate'}
                           </span>
                         )}
                       </div>
@@ -1495,12 +1495,15 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <p className="text-sm font-bold text-[#2f2419]">
-                                    {option.durationMinutes} min · {option.routeName ?? MODE_LABELS[option.mode]}
+                                    {option.source === 'google' ? option.durationMinutes : `~${option.durationMinutes}`} min · {option.routeName ?? MODE_LABELS[option.mode]}
                                   </p>
                                   {(option.recommended || optionIdx === 0) && (
                                     <span className="rounded-full bg-[#5f7d59] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">Best</span>
                                   )}
                                   {option.cost && <span className="text-[11px] font-semibold text-[#8a7965]">{option.cost}</span>}
+                                  <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#9a876f]">
+                                    {option.source === 'google' ? 'Google schedule' : 'AI estimate'}
+                                  </span>
                                 </div>
                                 <p className="mt-0.5 text-xs leading-5 text-[#66523b]">{option.description}</p>
                               </div>
@@ -1975,7 +1978,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#9a876f]">Route options</p>
                             {selectedTravelOptions.length > 0 && (
                               <span className="text-[10px] font-bold text-[#8a7965]">
-                                {selectedTravelOptions.some((option) => option.source === 'google') ? 'Google routes' : `Top ${selectedTravelOptions.length}`}
+                                {selectedTravelOptions.some((option) => option.source === 'google') ? 'Google schedule' : 'AI estimate'}
                               </span>
                             )}
                           </div>
@@ -1989,12 +1992,15 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                                   <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center gap-1.5">
                                       <p className="text-sm font-bold text-[#2f2419]">
-                                        {option.durationMinutes} min · {option.routeName ?? MODE_LABELS[option.mode]}
+                                        {option.source === 'google' ? option.durationMinutes : `~${option.durationMinutes}`} min · {option.routeName ?? MODE_LABELS[option.mode]}
                                       </p>
                                       {(option.recommended || optionIdx === 0) && (
                                         <span className="rounded-full bg-[#5f7d59] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-white">Best</span>
                                       )}
                                       {option.cost && <span className="text-[11px] font-semibold text-[#8a7965]">{option.cost}</span>}
+                                      <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#9a876f]">
+                                        {option.source === 'google' ? 'Google schedule' : 'AI estimate'}
+                                      </span>
                                     </div>
                                     <p className="mt-0.5 text-xs leading-5 text-[#66523b]">{option.description}</p>
                                   </div>

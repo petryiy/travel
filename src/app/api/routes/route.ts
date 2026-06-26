@@ -9,6 +9,7 @@ const DIRECTIONS_KEY =
 const MAX_SEGMENTS_PER_REQUEST = 30
 
 type GoogleMode = 'walking' | 'transit' | 'driving'
+type TransitMode = 'tram'
 
 interface RoutePoint {
   lat: number
@@ -99,9 +100,10 @@ function modeFromTransitSteps(steps: DirectionsStep[]): TravelMode {
 
   if (types.size !== 1) return 'transit'
   const [type] = Array.from(types)
-  if (type === 'BUS') return 'bus'
+  if (['BUS', 'INTERCITY_BUS', 'TROLLEYBUS', 'SHARE_TAXI'].includes(type ?? '')) return 'bus'
   if (type === 'FERRY') return 'ferry'
-  if (['RAIL', 'HEAVY_RAIL', 'COMMUTER_TRAIN', 'HIGH_SPEED_TRAIN', 'METRO_RAIL', 'SUBWAY', 'TRAM', 'MONORAIL'].includes(type ?? '')) {
+  if (['TRAM', 'METRO_RAIL'].includes(type ?? '')) return 'light_rail'
+  if (['RAIL', 'HEAVY_RAIL', 'COMMUTER_TRAIN', 'HIGH_SPEED_TRAIN', 'LONG_DISTANCE_TRAIN', 'SUBWAY', 'MONORAIL'].includes(type ?? '')) {
     return 'train'
   }
   return 'transit'
@@ -179,7 +181,7 @@ function routeToOption(route: DirectionsRoute, requestedMode: GoogleMode): Trave
   }
 }
 
-async function fetchDirections(segment: RouteSegment, mode: GoogleMode): Promise<TravelOption[]> {
+async function fetchDirections(segment: RouteSegment, mode: GoogleMode, transitMode?: TransitMode): Promise<TravelOption[]> {
   if (!DIRECTIONS_KEY) return []
 
   const url = new URL('https://maps.googleapis.com/maps/api/directions/json')
@@ -189,6 +191,7 @@ async function fetchDirections(segment: RouteSegment, mode: GoogleMode): Promise
   url.searchParams.set('alternatives', 'true')
   url.searchParams.set('departure_time', departureTimestamp(segment.date, segment.departureTime))
   url.searchParams.set('key', DIRECTIONS_KEY)
+  if (mode === 'transit' && transitMode) url.searchParams.set('transit_mode', transitMode)
   if (mode === 'driving') url.searchParams.set('traffic_model', 'best_guess')
 
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) })
@@ -207,7 +210,7 @@ function routeScore(option: TravelOption) {
   let score = option.durationMinutes
   if (option.mode === 'taxi' || option.mode === 'rideshare') score += 8
   if (option.mode === 'walk' && option.durationMinutes > 25) score += 25
-  if (['transit', 'bus', 'train', 'ferry'].includes(option.mode)) score -= 3
+  if (['transit', 'bus', 'train', 'light_rail', 'ferry'].includes(option.mode)) score -= 3
   return score
 }
 
@@ -221,20 +224,40 @@ function dedupeOptions(options: TravelOption[]) {
   })
 }
 
+function selectRouteOptions(rankedOptions: TravelOption[]) {
+  const selected: TravelOption[] = []
+  const add = (option?: TravelOption) => {
+    if (!option || selected.includes(option) || selected.length >= 3) return
+    selected.push(option)
+  }
+
+  add(rankedOptions[0])
+  add(rankedOptions.find((option) => option.mode === 'light_rail'))
+
+  rankedOptions.forEach((option) => {
+    if (!selected.some((current) => current.mode === option.mode)) add(option)
+  })
+  rankedOptions.forEach(add)
+
+  return selected
+}
+
 async function enrichSegment(segment: RouteSegment) {
   if (!isFinitePoint(segment.origin) || !isFinitePoint(segment.destination)) {
     return { dayIdx: segment.dayIdx, actIdx: segment.actIdx, options: [] }
   }
 
-  const [transit, walking, driving] = await Promise.all([
+  const [transit, lightRail, walking, driving] = await Promise.all([
     fetchDirections(segment, 'transit'),
+    fetchDirections(segment, 'transit', 'tram'),
     fetchDirections(segment, 'walking'),
     fetchDirections(segment, 'driving'),
   ])
 
-  const options = dedupeOptions([...transit, ...walking, ...driving])
+  const rankedOptions = dedupeOptions([...transit, ...lightRail, ...walking, ...driving])
     .sort((a, b) => routeScore(a) - routeScore(b))
-    .slice(0, 3)
+
+  const options = selectRouteOptions(rankedOptions)
     .map((option, index) => ({ ...option, recommended: index === 0 }))
 
   return {

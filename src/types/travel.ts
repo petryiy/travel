@@ -16,7 +16,7 @@ export interface Message {
   content: string
 }
 
-export type TravelMode = 'walk' | 'transit' | 'taxi' | 'rideshare' | 'train' | 'bus' | 'ferry' | 'flight' | 'other'
+export type TravelMode = 'walk' | 'transit' | 'taxi' | 'rideshare' | 'train' | 'light_rail' | 'bus' | 'ferry' | 'flight' | 'other'
 
 export interface TravelOption {
   mode: TravelMode
