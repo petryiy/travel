@@ -425,6 +425,31 @@ export function useChat(userId: string | null) {
     }
   }, [userId, savedTripId])
 
+  const deleteSavedTrip = useCallback(async (tripId: string) => {
+    if (!userId || !tripId) return false
+
+    setSaveStatus(null)
+    setSaveError(null)
+
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, { method: 'DELETE' })
+
+      if (!res.ok) throw new Error('Unable to delete trip')
+
+      setSavedTrips((prev) => prev.filter((trip) => trip.id !== tripId))
+      // If the trip currently open in the planner was deleted, reset back to a
+      // clean setup so we are not editing a plan that no longer exists.
+      if (savedTripId === tripId) {
+        startNewTrip()
+      }
+      setSaveStatus('Deleted trip')
+      return true
+    } catch {
+      setSaveError('Could not delete this trip.')
+      return false
+    }
+  }, [userId, savedTripId, startNewTrip])
+
   return {
     messages,
     canvasState,
@@ -448,6 +473,7 @@ export function useChat(userId: string | null) {
     openSavedTrip,
     renameSavedTripTitle,
     updateSavedTripPublishStatus,
+    deleteSavedTrip,
     retry,
   }
 }

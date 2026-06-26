@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import type { SavedTripSummary } from '@/types/travel'
 
@@ -8,6 +9,7 @@ interface Props {
   isLoadingTrips: boolean
   onNewTrip: () => void
   onOpenTrip: (tripId: string) => void
+  onDeleteTrip: (tripId: string) => Promise<boolean>
 }
 
 const STYLE_STAMPS: Record<SavedTripSummary['style'], string> = {
@@ -49,7 +51,28 @@ function ArrowIcon() {
   )
 }
 
-export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }: Props) {
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  )
+}
+
+export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip, onDeleteTrip }: Props) {
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  async function handleConfirmDelete(tripId: string) {
+    setDeletingId(tripId)
+    await onDeleteTrip(tripId)
+    setDeletingId(null)
+    setConfirmId(null)
+  }
+
   return (
     <main className="min-h-full flex-1 overflow-y-auto bg-[#f7f3ec] text-[#2f2419]">
       <section className="sticky top-0 z-20 border-b border-[#e0d7cb] bg-[#fbf8f2]/95 backdrop-blur lg:static lg:bg-[#fbf8f2] lg:backdrop-blur-0">
@@ -115,14 +138,19 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
               const updatedAt = formatUpdatedAt(trip.updatedAt)
               const hasCustomTitle = trip.title && trip.title !== trip.destination
 
+              const isConfirming = confirmId === trip.id
+              const isDeleting = deletingId === trip.id
+
               return (
-                <button
+                <div
                   key={trip.id}
-                  type="button"
-                  onClick={() => onOpenTrip(trip.id)}
-                  className="group rounded-2xl border border-[#e0d7cb] bg-[#fffaf2] p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#cbbba5] hover:bg-white hover:shadow-md sm:min-h-60 sm:rounded-3xl sm:p-5"
+                  className="group relative flex flex-col rounded-2xl border border-[#e0d7cb] bg-[#fffaf2] p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#cbbba5] hover:bg-white hover:shadow-md sm:min-h-60 sm:rounded-3xl sm:p-5"
                 >
-                  <div className="flex h-full flex-col">
+                  <button
+                    type="button"
+                    onClick={() => onOpenTrip(trip.id)}
+                    className="flex h-full flex-1 flex-col text-left"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-lg font-bold text-[#2f2419] sm:text-2xl">{trip.title || trip.destination}</p>
@@ -161,8 +189,40 @@ export function Dashboard({ savedTrips, isLoadingTrips, onNewTrip, onOpenTrip }:
                         <ArrowIcon />
                       </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+
+                  {isConfirming ? (
+                    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-[#e6c7bd] bg-white/95 px-2 py-1 shadow-sm backdrop-blur sm:bottom-4 sm:right-4">
+                      <span className="px-1 text-xs font-semibold text-[#8a5438]">Delete?</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleConfirmDelete(trip.id)}
+                        disabled={isDeleting}
+                        className="rounded-full bg-[#b4493a] px-2.5 py-1 text-xs font-bold text-white transition hover:bg-[#9c3f31] disabled:opacity-60"
+                      >
+                        {isDeleting ? 'Deleting...' : 'Yes'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmId(null)}
+                        disabled={isDeleting}
+                        className="rounded-full px-2.5 py-1 text-xs font-bold text-[#7d6c58] transition hover:bg-[#f1e9db] disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(trip.id)}
+                      aria-label={`Delete ${trip.title || trip.destination}`}
+                      title="Delete plan"
+                      className="absolute bottom-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-[#a0927f] opacity-0 transition hover:border-[#e6c7bd] hover:bg-white hover:text-[#b4493a] focus:opacity-100 focus-visible:opacity-100 group-hover:opacity-100 sm:bottom-4 sm:right-4"
+                    >
+                      <TrashIcon />
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>

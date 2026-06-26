@@ -95,6 +95,38 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id } = await context.params
+  const ownerId = session.user.id
+
+  const client = await getClient()
+  try {
+    const { rowCount } = await client.query(
+      'DELETE FROM trips WHERE id = $1 AND owner_id = $2',
+      [id, ownerId]
+    )
+
+    if (!rowCount) {
+      return NextResponse.json({ error: 'Trip not found.' }, { status: 404 })
+    }
+
+    return NextResponse.json({ id })
+  } catch (err) {
+    console.error('Delete trip error:', err)
+    return NextResponse.json({ error: 'Unable to delete this trip.' }, { status: 500 })
+  } finally {
+    await client.end()
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
