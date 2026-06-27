@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import type { Activity, DayPlan, Itinerary } from '@/types/travel'
+import type { Activity, DayPlan, Itinerary, CollaboratorRole } from '@/types/travel'
 import { getDayLocations, getLocationCenter } from '@/lib/itineraryMap'
 import { downloadItineraryPdf } from '@/lib/itineraryPdf'
 import { createItineraryPosterDataUrl } from '@/lib/posterExport'
@@ -32,10 +32,20 @@ interface Props {
   authorName?: string | null
   isPublished?: boolean
   isPublicView?: boolean
+  role?: CollaboratorRole
+  canManage?: boolean
+  onManageCollaborators?: () => void
   onBackToDashboard?: () => void
   onEdit?: () => void
   onRenameTitle?: (title: string) => Promise<boolean>
   onPublishChange?: (isPublished: boolean) => Promise<boolean>
+}
+
+const ROLE_NOTE: Record<CollaboratorRole, string> = {
+  owner: 'Owner',
+  editor: 'You can edit',
+  commenter: 'You can comment',
+  viewer: 'View only',
 }
 
 function formatDate(value: string) {
@@ -99,6 +109,9 @@ export function ItineraryOverview({
   authorName,
   isPublished = false,
   isPublicView = false,
+  role,
+  canManage = false,
+  onManageCollaborators,
   onBackToDashboard,
   onEdit,
   onRenameTitle,
@@ -298,6 +311,11 @@ export function ItineraryOverview({
                   Created by {shownAuthorName}
                 </p>
               )}
+              {!isPublicView && role && role !== 'owner' && (
+                <p className="ml-2 mt-3 inline-flex rounded-full border border-[#d8c8a8] bg-[#fffdf5]/80 px-3 py-1.5 text-sm font-semibold text-[#6d5740]">
+                  {ROLE_NOTE[role]}
+                </p>
+              )}
               {isEditingTitle ? (
                 <div className="mt-4 max-w-3xl">
                   <input
@@ -358,20 +376,33 @@ export function ItineraryOverview({
                           Rename
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={handleOpenShare}
-                        className="journal-sketch rounded-lg bg-[#d8e7d2] px-3 py-1.5 text-sm font-semibold text-[#426145] shadow-sm transition hover:bg-[#cbe1c2]"
-                      >
-                        Share
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleOpenPublish}
-                        className="journal-sketch rounded-lg bg-[#fffaf0] px-3 py-1.5 text-sm font-semibold text-[#5e4932] shadow-sm transition hover:bg-white"
-                      >
-                        {isPublished ? 'Unpublish' : 'Publish'}
-                      </button>
+                      {onManageCollaborators && (
+                        <button
+                          type="button"
+                          onClick={onManageCollaborators}
+                          className="journal-sketch rounded-lg bg-[#d8e7d2] px-3 py-1.5 text-sm font-semibold text-[#426145] shadow-sm transition hover:bg-[#cbe1c2]"
+                        >
+                          Invite
+                        </button>
+                      )}
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={handleOpenShare}
+                          className="journal-sketch rounded-lg bg-[#eef3ea] px-3 py-1.5 text-sm font-semibold text-[#56704f] shadow-sm transition hover:bg-[#e3ecdd]"
+                        >
+                          Share link
+                        </button>
+                      )}
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={handleOpenPublish}
+                          className="journal-sketch rounded-lg bg-[#fffaf0] px-3 py-1.5 text-sm font-semibold text-[#5e4932] shadow-sm transition hover:bg-white"
+                        >
+                          {isPublished ? 'Unpublish' : 'Publish'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

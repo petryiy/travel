@@ -1,6 +1,6 @@
 'use client'
 
-import type { CanvasState, TripDetails, Itinerary, ClarificationData, SavedTripSummary } from '@/types/travel'
+import type { CanvasState, TripDetails, Itinerary, ClarificationData, SavedTripSummary, CollaboratorRole, TripComment, CommentAnchorType, TripLock, TripPresence } from '@/types/travel'
 import { SetupForm } from './SetupForm'
 import { ClarificationCard } from './ClarificationCard'
 import { ItineraryDashboard } from './ItineraryDashboard'
@@ -21,13 +21,28 @@ interface Props {
   saveStatus: string | null
   saveError: string | null
   presentationMode: 'overview' | 'edit'
+  role?: CollaboratorRole
+  canManage?: boolean
+  onManageCollaborators?: () => void
+  comments?: TripComment[]
+  currentUserId?: string | null
+  canComment?: boolean
+  onAddComment?: (body: string, anchor: { type: CommentAnchorType; day?: number | null }) => Promise<boolean>
+  onToggleCommentResolved?: (commentId: string, resolved: boolean) => Promise<boolean>
+  onDeleteComment?: (commentId: string) => Promise<boolean>
+  dayLocks?: TripLock[]
+  aiLock?: TripLock | null
+  presence?: TripPresence[]
+  heldDay?: number | null
+  lockingEnabled?: boolean
+  onActiveDayChange?: (day: number | null) => void
   onSetup: (details: TripDetails) => void
   onSend: (text: string) => void
-  onUpdateItinerary: (itinerary: Itinerary) => void
+  onUpdateItinerary?: (itinerary: Itinerary) => void
   onSave: () => void
   onOpenSavedTrip: (tripId: string) => void
-  onRenameSavedTrip: (title: string) => Promise<boolean>
-  onPublishSavedTrip: (isPublished: boolean) => Promise<boolean>
+  onRenameSavedTrip?: (title: string) => Promise<boolean>
+  onPublishSavedTrip?: (isPublished: boolean) => Promise<boolean>
   onPresentationModeChange: (mode: 'overview' | 'edit') => void
   onBackToDashboard: () => void
   onRetry: () => void
@@ -48,6 +63,21 @@ export function CanvasPanel({
   saveStatus,
   saveError,
   presentationMode,
+  role,
+  canManage,
+  onManageCollaborators,
+  comments,
+  currentUserId,
+  canComment,
+  onAddComment,
+  onToggleCommentResolved,
+  onDeleteComment,
+  dayLocks,
+  aiLock,
+  presence,
+  heldDay,
+  lockingEnabled,
+  onActiveDayChange,
   onSetup,
   onSend,
   onUpdateItinerary,
@@ -119,6 +149,9 @@ export function CanvasPanel({
           savedTripId={savedTripId}
           authorName={authorName}
           isPublished={savedTripIsPublished}
+          role={role}
+          canManage={canManage}
+          onManageCollaborators={onManageCollaborators}
           onBackToDashboard={onBackToDashboard}
           onEdit={() => onPresentationModeChange('edit')}
           onRenameTitle={onRenameSavedTrip}
@@ -135,8 +168,24 @@ export function CanvasPanel({
         isSaving={isSaving}
         saveStatus={saveStatus}
         saveError={saveError}
+        role={role}
+        onManageCollaborators={onManageCollaborators}
+        comments={comments}
+        currentUserId={currentUserId}
+        canComment={canComment}
+        canManageComments={canManage}
+        onAddComment={onAddComment}
+        onToggleCommentResolved={onToggleCommentResolved}
+        onDeleteComment={onDeleteComment}
+        dayLocks={dayLocks}
+        aiLock={aiLock}
+        presence={presence}
+        heldDay={heldDay}
+        lockingEnabled={lockingEnabled}
+        onActiveDayChange={onActiveDayChange}
         onSave={onSave}
         onUpdateItinerary={onUpdateItinerary}
+        onRenameTitle={onRenameSavedTrip}
         onOverview={() => onPresentationModeChange('overview')}
         onBackToDashboard={onBackToDashboard}
       />

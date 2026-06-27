@@ -3,7 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { getProviders, signIn } from "next-auth/react";
+import { getProviders, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TRAVEL_IMAGES } from "@/lib/travel-images";
 
@@ -101,6 +101,9 @@ export function LandingPage({ initialView = "landing", callbackUrl = "/dashboard
 
     setIsLoading(true);
     try {
+      // Clear any stale credentials JWT before Google OAuth to prevent
+      // OAuthAccountNotLinked when two user records exist for the same email.
+      await signOut({ redirect: false });
       await signIn("google", { redirectTo: callbackUrl });
     } catch {
       setError("Could not start Google sign-in. Please try again.");

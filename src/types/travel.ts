@@ -96,6 +96,8 @@ export interface GeminiResponse {
 
 export type CanvasState = 'setup' | 'loading' | 'clarification' | 'itinerary' | 'error'
 
+export type CollaboratorRole = 'owner' | 'editor' | 'commenter' | 'viewer'
+
 export interface SavedTripSummary {
   id: string
   title: string
@@ -109,9 +111,63 @@ export interface SavedTripSummary {
   publishedAt?: string | null
   createdAt: string
   updatedAt: string
+  /** Optimistic-concurrency version; bumped on every itinerary write. */
+  version?: number
+  /** The current user's role for this trip ('owner' when they own it). */
+  role?: CollaboratorRole
+  /** Owner's display name — present on trips shared *with* the current user. */
+  ownerName?: string | null
 }
 
 export interface SavedTrip extends SavedTripSummary {
   itinerary: Itinerary
   messages: Message[]
+}
+
+/** A person a trip is shared with (or the owner), as shown in the Share modal. */
+export interface Collaborator {
+  userId: string
+  name: string | null
+  email: string | null
+  image: string | null
+  role: CollaboratorRole
+}
+
+export interface TripLock {
+  scope: 'day' | 'ai'
+  day: number | null
+  userId: string
+  userName: string | null
+  expiresAt: string
+}
+
+export interface TripPresence {
+  userId: string
+  userName: string | null
+  userImage: string | null
+}
+
+export interface TripSyncState {
+  version: number
+  updatedBy: string | null
+  role: CollaboratorRole
+  locks: TripLock[]
+  aiLock: TripLock | null
+  presence: TripPresence[]
+  commentCount: number
+}
+
+export type CommentAnchorType = 'trip' | 'day' | 'activity'
+
+export interface TripComment {
+  id: string
+  userId: string
+  authorName: string | null
+  anchorType: CommentAnchorType
+  anchorDay: number | null
+  anchorActivityId: string | null
+  body: string
+  resolved: boolean
+  createdAt: string
+  updatedAt: string
 }
