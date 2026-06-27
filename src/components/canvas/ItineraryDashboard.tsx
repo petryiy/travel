@@ -420,6 +420,7 @@ interface ActivityCardProps {
   onEditValueChange: (v: string) => void
   onDelete: () => void
   onMoveToDay: (toDayIdx: number) => void
+  editable: boolean
   isSelected?: boolean
   onSelect?: () => void
 }
@@ -438,6 +439,7 @@ function ActivityCard({
   onEditValueChange,
   onDelete,
   onMoveToDay,
+  editable,
   isSelected = false,
   onSelect,
 }: ActivityCardProps) {
@@ -487,7 +489,8 @@ function ActivityCard({
         isSelected ? 'border-[#5f7d59] ring-2 ring-[#5f7d59]/15' : 'border-[#dfd4c5]'
       } ${isDragging ? 'opacity-40' : 'hover:border-[#cdbca4] hover:bg-white hover:shadow-[0_12px_28px_rgba(75,58,36,0.08)]'}`}
     >
-      {/* Action buttons — visible on hover */}
+      {/* Action buttons — visible on hover (editors only) */}
+      {editable && (
       <div className="absolute right-2 top-2 flex items-center gap-1 opacity-100 transition sm:right-3 sm:top-3 sm:opacity-0 sm:group-hover/card:opacity-100">
         {totalDays > 1 && (
           <div className="relative hidden items-center gap-1 sm:flex">
@@ -540,6 +543,7 @@ function ActivityCard({
           ×
         </button>
       </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5 pr-9 sm:gap-2 sm:pr-16">
         <span className="rounded-full bg-[#f0e4d4] px-2.5 py-1 text-[11px] font-bold text-[#66523b]">
@@ -765,19 +769,21 @@ function SortableActivityRow(props: SortableActivityRowProps) {
       {/* Card + drag handle + connector */}
       <div className="relative flex gap-2">
         <div className="flex flex-col items-center">
-          <button
-            type="button"
-            {...listeners}
-            {...attributes}
-            className="mt-3 cursor-grab touch-none select-none rounded-lg p-1.5 text-[#b09c84] transition hover:bg-[#f0e4d4] hover:text-[#75624c] active:cursor-grabbing md:p-1"
-            title="Drag to reorder"
-          >
-            <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor">
-              <circle cx="4" cy="3" r="1.2" /><circle cx="10" cy="3" r="1.2" />
-              <circle cx="4" cy="7" r="1.2" /><circle cx="10" cy="7" r="1.2" />
-              <circle cx="4" cy="11" r="1.2" /><circle cx="10" cy="11" r="1.2" />
-            </svg>
-          </button>
+          {props.editable && (
+            <button
+              type="button"
+              {...listeners}
+              {...attributes}
+              className="mt-3 cursor-grab touch-none select-none rounded-lg p-1.5 text-[#b09c84] transition hover:bg-[#f0e4d4] hover:text-[#75624c] active:cursor-grabbing md:p-1"
+              title="Drag to reorder"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="currentColor">
+                <circle cx="4" cy="3" r="1.2" /><circle cx="10" cy="3" r="1.2" />
+                <circle cx="4" cy="7" r="1.2" /><circle cx="10" cy="7" r="1.2" />
+                <circle cx="4" cy="11" r="1.2" /><circle cx="10" cy="11" r="1.2" />
+              </svg>
+            </button>
+          )}
           <span className="mt-1 flex h-7 w-7 items-center justify-center rounded-xl bg-[#5f7d59] text-[11px] font-bold text-white shadow-sm">
             {index + 1}
           </span>
@@ -910,7 +916,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
     return itinerary.days[Number(parts[1])]?.activities[Number(parts[2])] ?? null
   }, [draggingId, itinerary])
 
-  function startEdit(id: string, value: string) { setEditingId(id); setEditingValue(value) }
+  function startEdit(id: string, value: string) { if (!onUpdateItinerary) return; setEditingId(id); setEditingValue(value) }
   function cancelEdit() { setEditingId(null) }
 
   function commitEdit(id: string, value: string) {
@@ -961,7 +967,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
     setEditingId(null)
   }
 
-  function startDetailEdit(id: string, value: string) { setDetailEditingId(id); setDetailEditingValue(value) }
+  function startDetailEdit(id: string, value: string) { if (!onUpdateItinerary) return; setDetailEditingId(id); setDetailEditingValue(value) }
   function cancelDetailEdit() { setDetailEditingId(null) }
 
   function commitDetailEdit(id: string, value: string) {
@@ -1027,6 +1033,9 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
         />
       )
     }
+    if (!onUpdateItinerary) {
+      return <span className={cls}>{value}</span>
+    }
     return (
       <span
         role="button" tabIndex={0}
@@ -1057,6 +1066,13 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
         />
       )
     }
+    if (!onUpdateItinerary) {
+      return (
+        <span className={cls}>
+          {value || <span className="italic text-[#b7a791]">{placeholder ?? 'Add details'}</span>}
+        </span>
+      )
+    }
     return (
       <span
         role="button"
@@ -1084,6 +1100,9 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
           className="w-full rounded border border-[#bca98d] bg-[#fffdf8] px-2 py-1 text-sm leading-6 text-[#5f4c36] outline-none ring-1 ring-[#5f7d59]/40 resize-none"
         />
       )
+    }
+    if (!onUpdateItinerary) {
+      return <span className="text-sm leading-6 text-[#5f4c36]">{itinerary.summary}</span>
     }
     return (
       <span
@@ -1261,6 +1280,7 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                               index={i}
                               actIdx={i}
                               totalActivities={day.activities.length}
+                              editable={Boolean(onUpdateItinerary)}
                               onDelete={() => onUpdateItinerary?.(removeActivity(itinerary, safeActiveDay, i))}
                               onMoveToDay={(toDayIdx) => onUpdateItinerary?.(moveActivityToDay(itinerary, safeActiveDay, i, toDayIdx))}
                               isSelected={i === selectedActivityIdx}
@@ -1498,8 +1518,9 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                     <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
                       <select
                         value={selectedActivity.type}
+                        disabled={!onUpdateItinerary}
                         onChange={(e) => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:type`, e.target.value)}
-                        className={`cursor-pointer rounded-full border px-3 py-1.5 capitalize ${TYPE_COLORS[selectedActivity.type]}`}
+                        className={`rounded-full border px-3 py-1.5 capitalize ${onUpdateItinerary ? 'cursor-pointer' : 'cursor-default'} ${TYPE_COLORS[selectedActivity.type]}`}
                       >
                         {ACTIVITY_TYPES.map((t) => (
                           <option key={t} value={t}>{t}</option>
@@ -1911,8 +1932,9 @@ export function ItineraryDashboard({ itinerary, savedTripTitle, savedTripId, isS
                         <div className="flex flex-wrap items-center gap-2">
                           <select
                             value={selectedActivity.type}
+                            disabled={!onUpdateItinerary}
                             onChange={(e) => commitDetailEdit(`act:${safeActiveDay}:${selectedActivityIdx}:type`, e.target.value)}
-                            className={`cursor-pointer rounded-full border px-3 py-1.5 text-[11px] font-semibold capitalize ${TYPE_COLORS[selectedActivity.type]}`}
+                            className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold capitalize ${onUpdateItinerary ? 'cursor-pointer' : 'cursor-default'} ${TYPE_COLORS[selectedActivity.type]}`}
                           >
                             {ACTIVITY_TYPES.map((t) => (
                               <option key={t} value={t}>{t}</option>
